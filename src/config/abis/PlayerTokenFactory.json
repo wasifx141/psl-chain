@@ -1,0 +1,425 @@
+[
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "oracle_",
+                           "type":  "address"
+                       },
+                       {
+                           "internalType":  "address",
+                           "name":  "market_",
+                           "type":  "address"
+                       },
+                       {
+                           "internalType":  "address",
+                           "name":  "initialOwner_",
+                           "type":  "address"
+                       }
+                   ],
+        "stateMutability":  "nonpayable",
+        "type":  "constructor"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "owner",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "OwnableInvalidOwner",
+        "type":  "error"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "account",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "OwnableUnauthorizedAccount",
+        "type":  "error"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
+                           "name":  "previousOwner",
+                           "type":  "address"
+                       },
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
+                           "name":  "newOwner",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "OwnershipTransferred",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  true,
+                           "internalType":  "uint8",
+                           "name":  "playerId",
+                           "type":  "uint8"
+                       },
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
+                           "name":  "tokenAddress",
+                           "type":  "address"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "string",
+                           "name":  "name",
+                           "type":  "string"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "string",
+                           "name":  "symbol",
+                           "type":  "string"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint8",
+                           "name":  "tier",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "PlayerDeployed",
+        "type":  "event"
+    },
+    {
+        "inputs":  [
+                       {
+                           "components":  [
+                                              {
+                                                  "internalType":  "uint8",
+                                                  "name":  "id",
+                                                  "type":  "uint8"
+                                              },
+                                              {
+                                                  "internalType":  "string",
+                                                  "name":  "name",
+                                                  "type":  "string"
+                                              },
+                                              {
+                                                  "internalType":  "string",
+                                                  "name":  "symbol",
+                                                  "type":  "string"
+                                              },
+                                              {
+                                                  "internalType":  "uint8",
+                                                  "name":  "tier",
+                                                  "type":  "uint8"
+                                              }
+                                          ],
+                           "internalType":  "struct PlayerTokenFactory.PlayerData",
+                           "name":  "player",
+                           "type":  "tuple"
+                       }
+                   ],
+        "name":  "addPlayer",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint256",
+                           "name":  "",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "allPlayerIds",
+        "outputs":  [
+                        {
+                            "internalType":  "uint8",
+                            "name":  "",
+                            "type":  "uint8"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "components":  [
+                                              {
+                                                  "internalType":  "uint8",
+                                                  "name":  "id",
+                                                  "type":  "uint8"
+                                              },
+                                              {
+                                                  "internalType":  "string",
+                                                  "name":  "name",
+                                                  "type":  "string"
+                                              },
+                                              {
+                                                  "internalType":  "string",
+                                                  "name":  "symbol",
+                                                  "type":  "string"
+                                              },
+                                              {
+                                                  "internalType":  "uint8",
+                                                  "name":  "tier",
+                                                  "type":  "uint8"
+                                              }
+                                          ],
+                           "internalType":  "struct PlayerTokenFactory.PlayerData[]",
+                           "name":  "players",
+                           "type":  "tuple[]"
+                       }
+                   ],
+        "name":  "deployAllPlayers",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "components":  [
+                                              {
+                                                  "internalType":  "uint8",
+                                                  "name":  "id",
+                                                  "type":  "uint8"
+                                              },
+                                              {
+                                                  "internalType":  "string",
+                                                  "name":  "name",
+                                                  "type":  "string"
+                                              },
+                                              {
+                                                  "internalType":  "string",
+                                                  "name":  "symbol",
+                                                  "type":  "string"
+                                              },
+                                              {
+                                                  "internalType":  "uint8",
+                                                  "name":  "tier",
+                                                  "type":  "uint8"
+                                              }
+                                          ],
+                           "internalType":  "struct PlayerTokenFactory.PlayerData[]",
+                           "name":  "players",
+                           "type":  "tuple[]"
+                       },
+                       {
+                           "internalType":  "uint256",
+                           "name":  "start",
+                           "type":  "uint256"
+                       },
+                       {
+                           "internalType":  "uint256",
+                           "name":  "end",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "deployBatch",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "getAllPlayerIds",
+        "outputs":  [
+                        {
+                            "internalType":  "uint8[]",
+                            "name":  "",
+                            "type":  "uint8[]"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "getAllTokenAddresses",
+        "outputs":  [
+                        {
+                            "internalType":  "address[]",
+                            "name":  "",
+                            "type":  "address[]"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "playerId_",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "getPlayerToken",
+        "outputs":  [
+                        {
+                            "internalType":  "address",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "marketAddress",
+        "outputs":  [
+                        {
+                            "internalType":  "address",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "oracleAddress",
+        "outputs":  [
+                        {
+                            "internalType":  "address",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "owner",
+        "outputs":  [
+                        {
+                            "internalType":  "address",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "playerTokens",
+        "outputs":  [
+                        {
+                            "internalType":  "address",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "renounceOwnership",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "market_",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "setMarket",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "oracle_",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "setOracle",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "totalDeployed",
+        "outputs":  [
+                        {
+                            "internalType":  "uint256",
+                            "name":  "",
+                            "type":  "uint256"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "newOwner",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "transferOwnership",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    }
+]

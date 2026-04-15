@@ -1,38 +1,38 @@
 import deployments from '../../deployments.json'
 
-// Import ABIs from Hardhat artifacts
-import PrizePoolABI from '../../artifacts/contracts/pool/PrizePool.sol/PrizePool.json'
-import MarketContractABI from '../../artifacts/contracts/market/MarketContract.sol/MarketContract.json'
-import PSLOracleABI from '../../artifacts/contracts/oracle/PSLOracle.sol/PSLOracle.json'
-import StakingContractABI from '../../artifacts/contracts/staking/StakingContract.sol/StakingContract.json'
-import ChampionNFTABI from '../../artifacts/contracts/nft/ChampionNFT.sol/ChampionNFT.json'
-import PSLPlayerTokenABI from '../../artifacts/contracts/tokens/PSLPlayerToken.sol/PSLPlayerToken.json'
-import PlayerTokenFactoryABI from '../../artifacts/contracts/factory/PlayerTokenFactory.sol/PlayerTokenFactory.json'
+// Import checked-in ABI JSONs for build-safe server/client usage
+import PrizePoolABI from './abis/PrizePool.json'
+import MarketContractABI from './abis/MarketContract.json'
+import PSLOracleABI from './abis/PSLOracle.json'
+import StakingContractABI from './abis/StakingContract.json'
+import ChampionNFTABI from './abis/ChampionNFT.json'
+import PSLPlayerTokenABI from './abis/PSLPlayerToken.json'
+import PlayerTokenFactoryABI from './abis/PlayerTokenFactory.json'
 
 export const contracts = {
   prizePool: {
     address: deployments.prizePool as `0x${string}`,
-    abi: PrizePoolABI.abi,
+    abi: PrizePoolABI,
   },
   marketContract: {
     address: deployments.marketContract as `0x${string}`,
-    abi: MarketContractABI.abi,
+    abi: MarketContractABI,
   },
   oracle: {
     address: deployments.oracle as `0x${string}`,
-    abi: PSLOracleABI.abi,
+    abi: PSLOracleABI,
   },
   stakingContract: {
     address: deployments.stakingContract as `0x${string}`,
-    abi: StakingContractABI.abi,
+    abi: StakingContractABI,
   },
   championNFT: {
     address: deployments.championNFT as `0x${string}`,
-    abi: ChampionNFTABI.abi,
+    abi: ChampionNFTABI,
   },
   playerTokenFactory: {
     address: deployments.playerTokenFactory as `0x${string}`,
-    abi: PlayerTokenFactoryABI.abi,
+    abi: PlayerTokenFactoryABI,
   }
 } as const
 
@@ -40,7 +40,7 @@ export const contracts = {
 export const playerTokens = deployments.playerTokens as Record<string, `0x${string}`>
 
 // PSLPlayerToken ABI for individual player tokens
-export const playerTokenABI = PSLPlayerTokenABI.abi
+export const playerTokenABI = PSLPlayerTokenABI
 
 // Contract addresses for easy access
 export const contractAddresses = {

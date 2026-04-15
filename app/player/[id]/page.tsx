@@ -1,5 +1,7 @@
 "use client";
 
+import { MARKET_ABI, STAKING_ABI } from "@/config/abis";
+import { CONTRACTS } from "@/config/contracts";
 import { PLAYERS, TEAM_COLORS } from "@/config/players";
 import {
   getExplorerUrl,
@@ -12,7 +14,6 @@ import {
   useStakeTokens,
 } from "@/hooks/useContract";
 import { formatNumber } from "@/utils/format";
-import { supabase } from "@/utils/supabase/client";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -24,8 +25,8 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-import { formatEther } from "viem";
-import { useAccount } from "wagmi";
+import { formatEther, parseAbiItem } from "viem";
+import { useAccount, usePublicClient } from "wagmi";
 
 interface Transaction {
   id: string;
@@ -45,7 +46,69 @@ interface TopHolder {
 
 interface PriceHistoryPoint {
   timestamp: string;
+  time: number;
   price: number;
+}
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+const TOKEN_BOUGHT_EVENT = parseAbiItem(
+  "event TokenBought(address indexed buyer, address indexed playerToken, uint256 amount, uint256 cost, uint256 newSupply)",
+);
+const TOKEN_SOLD_EVENT = parseAbiItem(
+  "event TokenSold(address indexed seller, address indexed playerToken, uint256 amount, uint256 refund, uint256 newSupply)",
+);
+const STAKED_EVENT = parseAbiItem(
+  "event Staked(address indexed wallet, uint8 matchId, uint8 playerId, uint256 amount)",
+);
+const UNSTAKED_EVENT = parseAbiItem(
+  "event Unstaked(address indexed wallet, uint8 matchId, uint8 playerId, uint256 amount)",
+);
+
+const chartTickFormatter = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+});
+const tooltipDateFormatter = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+function buildChartData(
+  priceHistory: PriceHistoryPoint[],
+  currentPrice: number,
+): PriceHistoryPoint[] {
+  const now = Date.now();
+  const windowStart = now - THIRTY_DAYS_MS;
+  const sortedHistory = [...priceHistory].sort((a, b) => a.time - b.time);
+  const visibleHistory = sortedHistory.filter(
+    (point) => point.time >= windowStart && point.time <= now,
+  );
+  const previousPoint = [...sortedHistory]
+    .reverse()
+    .find((point) => point.time < windowStart);
+  const fallbackPrice =
+    currentPrice > 0
+      ? currentPrice
+      : sortedHistory[sortedHistory.length - 1]?.price ?? 0;
+  const seedPrice =
+    previousPoint?.price ?? visibleHistory[0]?.price ?? fallbackPrice;
+
+  return [
+    {
+      timestamp: new Date(windowStart).toISOString(),
+      time: windowStart,
+      price: seedPrice,
+    },
+    ...visibleHistory.map((point) => ({ ...point })),
+    {
+      timestamp: new Date(now).toISOString(),
+      time: now,
+      price: fallbackPrice || seedPrice,
+    },
+  ];
 }
 
 export default function PlayerDetail() {
@@ -57,7 +120,7 @@ export default function PlayerDetail() {
   const [amount, setAmount] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // Real-time data from Supabase
+  // Market data state
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
     [],
   );
@@ -66,10 +129,14 @@ export default function PlayerDetail() {
   const [myStaked, setMyStaked] = useState(0);
 
   const { address, isConnected } = useAccount();
+  const publicClient = usePublicClient();
 
   // On-chain reads
-  const { data: remaining, isLoading: remainingLoading } =
-    useGetTokensRemaining(player?.tokenAddress ?? "");
+  const { data: remaining } = useGetTokensRemaining(player?.tokenAddress ?? "");
+  const { data: currentUnitBuyPrice } = useGetBuyPrice(
+    player?.tokenAddress ?? "",
+    1,
+  );
   const { data: buyPrice, isLoading: buyPriceLoading } = useGetBuyPrice(
     player?.tokenAddress ?? "",
     amount,
@@ -88,226 +155,211 @@ export default function PlayerDetail() {
   const { sellTokens } = useSellTokens();
   const { stakeTokens } = useStakeTokens();
 
-  // Fetch real-time data from Supabase
+  // Fetch player activity and holders directly from chain data
   useEffect(() => {
-    if (!player) return;
+    if (!player || !publicClient) return;
+
+    let cancelled = false;
+    const playerToken = player.tokenAddress as `0x${string}`;
 
     const fetchData = async () => {
-      console.log(
-        "🔄 Fetching data for player:",
-        player.name,
-        "ID:",
-        player.numericId,
-      );
+      try {
+        const [buyLogs, sellLogs, stakeLogs, unstakeLogs] = await Promise.all([
+          publicClient.getLogs({
+            address: CONTRACTS.MARKET,
+            event: TOKEN_BOUGHT_EVENT,
+            args: { playerToken },
+            fromBlock: 0n,
+            toBlock: "latest",
+          }),
+          publicClient.getLogs({
+            address: CONTRACTS.MARKET,
+            event: TOKEN_SOLD_EVENT,
+            args: { playerToken },
+            fromBlock: 0n,
+            toBlock: "latest",
+          }),
+          publicClient.getLogs({
+            address: CONTRACTS.STAKING,
+            event: STAKED_EVENT,
+            fromBlock: 0n,
+            toBlock: "latest",
+          }),
+          publicClient.getLogs({
+            address: CONTRACTS.STAKING,
+            event: UNSTAKED_EVENT,
+            fromBlock: 0n,
+            toBlock: "latest",
+          }),
+        ]);
 
-      // Fetch recent transactions for this player
-      const { data: txData, error: txError } = await supabase
-        .from("transactions")
-        .select("*")
-        .or(
-          `player_id.eq.${player.numericId},player_token.ilike.${player.tokenAddress}`,
-        )
-        .order("timestamp", { ascending: false })
-        .limit(10);
-
-      if (txError) {
-        console.error("❌ Error fetching transactions:", txError);
-      } else {
-        console.log("✅ Transactions fetched:", txData?.length || 0, "records");
-        if (txData) setRecentTransactions(txData);
-      }
-
-      // Fetch price history (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const { data: priceData, error: priceError } = await supabase
-        .from("transactions")
-        .select("timestamp, cost_wc, amount")
-        .or(
-          `player_id.eq.${player.numericId},player_token.ilike.${player.tokenAddress}`,
-        )
-        .in("action", ["buy", "sell"])
-        .not("cost_wc", "is", null)
-        .not("amount", "is", null)
-        .gt("amount", 0)
-        .gte("timestamp", thirtyDaysAgo.toISOString())
-        .order("timestamp", { ascending: true });
-
-      if (priceError) {
-        console.error("❌ Error fetching price history:", priceError);
-      } else {
-        console.log(
-          "✅ Price data fetched:",
-          priceData?.length || 0,
-          "records",
+        const playerStakeLogs = stakeLogs.filter(
+          (log) => Number(log.args.playerId ?? -1n) === player.numericId,
         );
-      }
+        const playerUnstakeLogs = unstakeLogs.filter(
+          (log) => Number(log.args.playerId ?? -1n) === player.numericId,
+        );
 
-      if (priceData && priceData.length > 0) {
-        const history = priceData
-          .filter((tx) => {
-            const amount = Number(tx.amount);
-            const cost = Number(tx.cost_wc);
-            return amount > 0 && cost > 0 && isFinite(cost / amount);
-          })
+        const relevantBlockNumbers = Array.from(
+          new Set(
+            [...buyLogs, ...sellLogs, ...playerStakeLogs, ...playerUnstakeLogs]
+              .map((log) => log.blockNumber?.toString())
+              .filter(Boolean),
+          ),
+        ).map((blockNumber) => BigInt(blockNumber));
+
+        const blockTimes = new Map<string, number>(
+          await Promise.all(
+            relevantBlockNumbers.map(async (blockNumber) => {
+              const block = await publicClient.getBlock({ blockNumber });
+              return [
+                blockNumber.toString(),
+                Number(block.timestamp) * 1000,
+              ] as const;
+            }),
+          ),
+        );
+
+        const transactions: Transaction[] = [
+          ...buyLogs.map((log) => {
+            const blockKey = log.blockNumber?.toString() ?? "";
+            const timestampMs = blockTimes.get(blockKey) ?? Date.now();
+            return {
+              id: `${log.transactionHash ?? ""}-${Number(log.logIndex ?? 0)}`,
+              tx_hash: log.transactionHash ?? "",
+              action: "buy",
+              wallet: (log.args.buyer ?? "").toLowerCase(),
+              amount: Number(log.args.amount ?? 0n),
+              cost_wc: Number(formatEther(log.args.cost ?? 0n)),
+              timestamp: new Date(timestampMs).toISOString(),
+            };
+          }),
+          ...sellLogs.map((log) => {
+            const blockKey = log.blockNumber?.toString() ?? "";
+            const timestampMs = blockTimes.get(blockKey) ?? Date.now();
+            return {
+              id: `${log.transactionHash ?? ""}-${Number(log.logIndex ?? 0)}`,
+              tx_hash: log.transactionHash ?? "",
+              action: "sell",
+              wallet: (log.args.seller ?? "").toLowerCase(),
+              amount: Number(log.args.amount ?? 0n),
+              cost_wc: Number(formatEther(log.args.refund ?? 0n)),
+              timestamp: new Date(timestampMs).toISOString(),
+            };
+          }),
+          ...playerStakeLogs.map((log) => {
+            const blockKey = log.blockNumber?.toString() ?? "";
+            const timestampMs = blockTimes.get(blockKey) ?? Date.now();
+            return {
+              id: `${log.transactionHash ?? ""}-${Number(log.logIndex ?? 0)}`,
+              tx_hash: log.transactionHash ?? "",
+              action: "stake",
+              wallet: (log.args.wallet ?? "").toLowerCase(),
+              amount: Number(log.args.amount ?? 0n),
+              timestamp: new Date(timestampMs).toISOString(),
+            };
+          }),
+          ...playerUnstakeLogs.map((log) => {
+            const blockKey = log.blockNumber?.toString() ?? "";
+            const timestampMs = blockTimes.get(blockKey) ?? Date.now();
+            return {
+              id: `${log.transactionHash ?? ""}-${Number(log.logIndex ?? 0)}`,
+              tx_hash: log.transactionHash ?? "",
+              action: "unstake",
+              wallet: (log.args.wallet ?? "").toLowerCase(),
+              amount: Number(log.args.amount ?? 0n),
+              timestamp: new Date(timestampMs).toISOString(),
+            };
+          }),
+        ]
+          .filter((tx) => tx.wallet && tx.tx_hash)
+          .sort(
+            (a, b) =>
+              new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+          );
+
+        const history = transactions
+          .filter(
+            (tx) =>
+              (tx.action === "buy" || tx.action === "sell") &&
+              Number(tx.amount) > 0 &&
+              Number(tx.cost_wc) > 0,
+          )
           .map((tx) => ({
             timestamp: tx.timestamp,
+            time: new Date(tx.timestamp).getTime(),
             price: Number(tx.cost_wc) / Number(tx.amount),
-          }));
+          }))
+          .sort((a, b) => a.time - b.time);
 
-        // If we have valid history, set it
-        if (history.length > 0) {
-          console.log(
-            "✅ Setting price history with",
-            history.length,
-            "points",
-          );
-          setPriceHistory(history);
-        } else {
-          // If no valid history, create a single point with current price
-          console.log("⚠️ No valid price history, using current price");
-          setPriceHistory([
-            {
-              timestamp: new Date().toISOString(),
-              price: player.price,
-            },
-          ]);
-        }
-      } else {
-        // No data at all, use current price as starting point
-        console.log("⚠️ No price data, using current price");
-        setPriceHistory([
-          {
-            timestamp: new Date().toISOString(),
-            price: player.price,
-          },
-        ]);
-      }
+        const holderWallets = Array.from(
+          new Set([
+            ...transactions.map((tx) => tx.wallet.toLowerCase()),
+            ...(address ? [address.toLowerCase()] : []),
+          ]),
+        ).filter(Boolean);
 
-      // Calculate top holders from portfolio cache
-      const { data: portfolios, error: portfolioError } = await supabase
-        .from("portfolio_cache")
-        .select("wallet, holdings");
-
-      if (portfolioError) {
-        console.error("❌ Error fetching portfolios:", portfolioError);
-      } else {
-        console.log(
-          "✅ Portfolios fetched:",
-          portfolios?.length || 0,
-          "records",
-        );
-      }
-
-      if (portfolios) {
-        const holders: Record<string, number> = {};
-
-        portfolios.forEach((p) => {
-          const hArray = p.holdings as Array<{
-            player_id: number;
-            amount: number;
-          }>;
-          if (hArray && Array.isArray(hArray)) {
-            hArray.forEach((h) => {
-              if (h.player_id === player.numericId) {
-                holders[p.wallet] = (holders[p.wallet] || 0) + h.amount;
-              }
+        const holderResults = await Promise.allSettled(
+          holderWallets.map(async (wallet) => {
+            const amountHeld = await publicClient.readContract({
+              address: CONTRACTS.MARKET,
+              abi: MARKET_ABI,
+              functionName: "getHoldings",
+              args: [wallet as `0x${string}`, playerToken],
             });
-          }
-        });
 
-        // Include the current connected user's holdings immediately without waiting for listener
-        if (address && holdings && Number(holdings) > 0) {
-          const addr = address.toLowerCase();
-          holders[addr] = Math.max(holders[addr] || 0, Number(holdings));
-        }
-
-        const topHoldersList = Object.entries(holders)
-          .map(([wallet, amount]) => ({ wallet, amount }))
-          .sort((a, b) => b.amount - a.amount)
-          .slice(0, 10);
-
-        console.log(
-          "✅ Top holders calculated:",
-          topHoldersList.length,
-          "holders",
+            return {
+              wallet,
+              amount: Number(amountHeld),
+            };
+          }),
         );
-        setTopHolders(topHoldersList);
-      }
 
-      // Fetch user's staked amount
-      if (address) {
-        const { data: stakingData, error: stakingError } = await supabase
-          .from("staking_positions")
-          .select("amount")
-          .eq("wallet", address.toLowerCase())
-          .eq("player_id", player.numericId)
-          .eq("is_active", true);
+        let stakedAmount = 0;
+        if (address) {
+          const stake = (await publicClient.readContract({
+            address: CONTRACTS.STAKING,
+            abi: STAKING_ABI,
+            functionName: "getStake",
+            args: [
+              address as `0x${string}`,
+              1 as unknown as number & { __brand: "uint8" },
+              player.numericId as unknown as number & { __brand: "uint8" },
+            ],
+          })) as { amount: bigint };
 
-        if (stakingError) {
-          console.error("❌ Error fetching staking data:", stakingError);
-        } else {
-          console.log(
-            "✅ Staking data fetched:",
-            stakingData?.length || 0,
-            "positions",
-          );
+          stakedAmount = Number(stake.amount ?? 0n);
         }
 
-        if (stakingData) {
-          const totalStaked = stakingData.reduce(
-            (sum, pos) => sum + Number(pos.amount),
-            0,
+        if (!cancelled) {
+          setRecentTransactions(transactions.slice(0, 10));
+          setPriceHistory(history);
+          setTopHolders(
+            holderResults
+              .flatMap((result) =>
+                result.status === "fulfilled" && result.value.amount > 0
+                  ? [result.value]
+                  : [],
+              )
+              .sort((a, b) => b.amount - a.amount)
+              .slice(0, 10),
           );
-          setMyStaked(totalStaked);
+          setMyStaked(stakedAmount);
         }
+      } catch (error) {
+        console.error("Failed to fetch player activity:", error);
       }
     };
 
     fetchData();
 
-    // Set up polling interval to refresh data every 5 seconds
-    const pollInterval = setInterval(fetchData, 5000);
-
-    // Subscribe to real-time updates
-    const transactionsChannel = supabase
-      .channel(`player-${player.numericId}-transactions`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "transactions",
-          // Removing restrictive filter so we catch both player_id and player_token events
-        },
-        () => {
-          fetchData();
-        },
-      )
-      .subscribe();
-
-    const portfolioChannel = supabase
-      .channel(`player-${player.numericId}-portfolio`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "portfolio_cache",
-        },
-        () => {
-          fetchData();
-        },
-      )
-      .subscribe();
+    const pollInterval = setInterval(fetchData, 10000);
 
     return () => {
+      cancelled = true;
       clearInterval(pollInterval);
-      supabase.removeChannel(transactionsChannel);
-      supabase.removeChannel(portfolioChannel);
     };
-  }, [player, address]);
+  }, [player, publicClient, address]);
 
   if (!player) {
     return (
@@ -320,7 +372,6 @@ export default function PlayerDetail() {
   const colors = TEAM_COLORS[player.team];
   const supplyRemaining =
     remaining !== undefined ? Number(remaining) : player.supply;
-  const supplyPct = (supplyRemaining / player.maxSupply) * 100;
   const myHoldings = holdings !== undefined ? Number(holdings) : 0;
 
   const displayBuyPrice =
@@ -335,8 +386,10 @@ export default function PlayerDetail() {
 
   const fee = displayBuyPrice * 0.02;
 
-  // Use the actual current market rate per token as Current Price 
-  const currentPrice = buyPrice !== undefined ? displayBuyPrice / amount : player.price;
+  const currentPrice =
+    currentUnitBuyPrice !== undefined
+      ? parseFloat(formatEther(currentUnitBuyPrice as bigint))
+      : player.price;
 
   // Format time ago
   const formatTimeAgo = (timestamp: string) => {
@@ -477,35 +530,26 @@ export default function PlayerDetail() {
     setLoading(false);
   };
 
-  const generateOrganicCurve = (start: number, end: number, length: number) => {
-    // Generate an authentic-looking wavy line that connects start to end over `length` days
-    const range = end - start;
-    const out = [];
-    for (let i = 0; i < length; i++) {
-        if (i === 0) out.push({ day: 1, price: start });
-        else if (i === length - 1) out.push({ day: length, price: end });
-        else {
-            const progress = i / (length - 1);
-            // Non-linear progress baseline
-            const baseValue = start + (range * progress);
-            // Add deterministic pseudo-random wave based on day
-            const wave = Math.sin(i * 0.5) * 0.05 + Math.cos(i * 0.8) * 0.03;
-            // Ensure we don't go negative or look too chaotic
-            const noisyValue = Math.max(0, baseValue + wave * (Math.max(start, end) * 0.5));
-            out.push({ day: i + 1, price: Number(noisyValue.toFixed(4)) });
-        }
-    }
-    return out;
-  };
+  const chartData = buildChartData(priceHistory, currentPrice);
 
-  // Generate 30-day wavy history using actual base start and current latest price from chain
-  const chartData = generateOrganicCurve(player.price, currentPrice, 30);
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({
+    active,
+    payload,
+    label,
+  }: {
+    active?: boolean;
+    payload?: Array<{ value: number }>;
+    label?: number | string;
+  }) => {
     if (active && payload && payload.length) {
+      const labelValue = Number(label);
+      const labelText = Number.isFinite(labelValue)
+        ? tooltipDateFormatter.format(new Date(labelValue))
+        : "";
+
       return (
-        <div className="rounded-lg bg-[#1a1b2e] border border-[#2a2b3e] p-3 shadow-xl text-left">
-          <p className="text-white font-medium mb-1">{label}</p>
+        <div className="rounded-lg border border-[#2a2b3e] bg-[#1a1b2e] p-3 text-left shadow-xl">
+          <p className="mb-1 font-medium text-white">{labelText}</p>
           <p className="text-[#FFD700]">
             price : {formatNumber(payload[0].value)}
           </p>
@@ -515,8 +559,17 @@ export default function PlayerDetail() {
     return null;
   };
 
-  // Determine max Y scale to avoid chart cutoff
-  const yMax = Math.max(0.6, Math.ceil((currentPrice + 0.1) * 5) / 5);
+  const chartPrices = chartData.map((point) => point.price);
+  const minChartPrice = chartPrices.length > 0 ? Math.min(...chartPrices) : 0;
+  const maxChartPrice =
+    chartPrices.length > 0 ? Math.max(...chartPrices) : currentPrice;
+  const yPadding = Math.max(
+    (maxChartPrice - minChartPrice) * 0.2,
+    maxChartPrice * 0.08,
+    0.01,
+  );
+  const yMin = Math.max(0, minChartPrice - yPadding);
+  const yMax = maxChartPrice + yPadding;
 
   return (
     <div className="container mx-auto px-4 py-8 animate-in fade-in duration-500">
@@ -596,7 +649,7 @@ export default function PlayerDetail() {
               30-Day Price History
             </h3>
             <div className="relative h-64 w-full">
-              {priceHistory.length > 0 ? (
+              {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={chartData}
@@ -623,25 +676,27 @@ export default function PlayerDetail() {
                       </linearGradient>
                     </defs>
                     <XAxis
-                      dataKey="day"
+                      dataKey="time"
+                      type="number"
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: "#64748b", fontSize: 12 }}
                       dy={10}
-                      domain={[1, 30]}
-                      type="number"
-                      ticks={[
-                        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-                        17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
-                      ]}
+                      domain={["dataMin", "dataMax"]}
+                      tickFormatter={(value) =>
+                        chartTickFormatter.format(new Date(Number(value)))
+                      }
+                      tickCount={6}
+                      minTickGap={24}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: "#64748b", fontSize: 12 }}
+                      tickFormatter={(value) => formatNumber(Number(value))}
+                      width={56}
                       dx={-10}
-                      domain={[0, yMax]}
-                      ticks={[0, yMax / 4, yMax / 2, yMax * 0.75, yMax]}
+                      domain={[yMin, yMax]}
                     />
                     <Tooltip
                       content={<CustomTooltip />}
@@ -720,8 +775,8 @@ export default function PlayerDetail() {
                         </td>
                         <td className="py-3 text-right">{tx.amount || "-"}</td>
                         <td className="py-3 text-right">
-                          {tx.cost_wc
-                            ? `${formatNumber(Number(tx.cost_wc))} WC`
+                          {tx.cost_wc && tx.amount > 0
+                            ? `${formatNumber(Number(tx.cost_wc) / Number(tx.amount))} WC`
                             : "-"}
                         </td>
                         <td className="py-3 text-right text-muted-foreground">

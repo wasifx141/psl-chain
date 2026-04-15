@@ -1,0 +1,5 @@
+playerId,playerName,teamCode,runs,balls,fours,sixes,wickets,overs,maidens,catches,stumpings,runOuts
+1,Babar Azam,PZ,55,40,6,2,0,0,0,1,0,0
+2,Shaheen Afridi,LQ,10,5,0,1,3,4,0,0,0,1
+3,Mohammad Rizwan,MS,45,35,4,1,0,0,0,2,1,0
+999,Unknown Player,XX,100,50,10,5,0,0,0,0,0,0

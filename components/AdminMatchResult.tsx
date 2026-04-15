@@ -147,6 +147,63 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
     }
   }
 
+  // Handle CSV Upload
+  const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split('\n');
+      if (lines.length < 2) {
+        toast.error('CSV is empty or missing headers');
+        return;
+      }
+
+      const newStats: ManualPlayerStat[] = [];
+      let skipped = 0;
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const values = line.split(',');
+
+        const rowId = values[0]?.trim();
+        // Check if player is in our 40-player config
+        const knownPlayer = PLAYERS.find((p) => p.id === rowId);
+
+        if (!knownPlayer) {
+          skipped++;
+          continue; // SKIP remainings
+        }
+
+        newStats.push({
+          playerId: knownPlayer.id,
+          playerName: knownPlayer.name,
+          teamCode: knownPlayer.team,
+          runs: Number(values[3] || 0),
+          balls: Number(values[4] || 0),
+          fours: Number(values[5] || 0),
+          sixes: Number(values[6] || 0),
+          wickets: Number(values[7] || 0),
+          overs: Number(values[8] || 0),
+          maidens: Number(values[9] || 0),
+          catches: Number(values[10] || 0),
+          stumpings: Number(values[11] || 0),
+          runOuts: Number(values[12] || 0),
+        });
+      }
+
+      setStats(newStats);
+      toast.success(`Loaded ${newStats.length} players from CSV. Skipped ${skipped} unknown players.`);
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+
   return (
     <div className="card-surface rounded-xl border border-amber-500/30 overflow-hidden">
       {/* Toggle Header */}
@@ -212,7 +269,30 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
             </p>
           </div>
 
-          {/* ── Section B: Manual Entry ── */}
+          {/* ── Section B: Upload CSV ── */}
+          <div className="rounded-lg border border-blue-500/20 p-4 bg-blue-500/5 space-y-3">
+            <div className="flex justify-between items-center">
+              <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                📄 Upload CSV Form
+              </p>
+              <a href="/sample-match-result.csv" download className="text-xs text-blue-400 underline">
+                Download Sample CSV
+              </a>
+            </div>
+            <div>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleCsvUpload}
+                className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Upload a CSV matching players.json format. Unregistered players will be skipped.
+            </p>
+          </div>
+
+          {/* ── Section C: Manual Entry ── */}
           <div className="rounded-lg border border-amber-500/20 p-4 bg-amber-500/5 space-y-4">
             <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
               ✏️ Manual Entry

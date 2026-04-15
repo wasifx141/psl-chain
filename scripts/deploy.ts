@@ -1,6 +1,11 @@
-import { ethers } from "hardhat";
 import fs from "fs";
+import pkg from "hardhat";
 import path from "path";
+import { fileURLToPath } from "url";
+const { ethers } = pkg;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface DeploymentAddresses {
   prizePool: string;
@@ -31,10 +36,13 @@ async function main() {
   console.log("Account balance:", ethers.formatEther(balance), "WC");
 
   const deploymentsPath = path.join(__dirname, "../deployments.json");
-  const txHashesPath    = path.join(__dirname, "../txhashes.txt");
+  const txHashesPath = path.join(__dirname, "../txhashes.txt");
 
   // Clear txhashes for this deployment run
-  fs.writeFileSync(txHashesPath, `=== PSL Chain Deployment — ${new Date().toISOString()} ===\n`);
+  fs.writeFileSync(
+    txHashesPath,
+    `=== PSL Chain Deployment — ${new Date().toISOString()} ===\n`,
+  );
 
   const deployments: DeploymentAddresses = {
     prizePool: "",
@@ -43,15 +51,21 @@ async function main() {
     championNFT: "",
     marketContract: "",
     playerTokenFactory: "",
-    playerTokens: {}
+    playerTokens: {},
   };
 
   // Load players data
   const playersPath = path.join(__dirname, "../data/players.json");
-  const playersData: PlayerData[] = JSON.parse(fs.readFileSync(playersPath, "utf8"));
-  console.log(`\n📋 Loaded ${playersData.length} players from data/players.json`);
+  const playersData: PlayerData[] = JSON.parse(
+    fs.readFileSync(playersPath, "utf8"),
+  );
+  console.log(
+    `\n📋 Loaded ${playersData.length} players from data/players.json`,
+  );
   if (playersData.length !== 40) {
-    throw new Error(`Expected 40 players, got ${playersData.length} — fix data/players.json first`);
+    throw new Error(
+      `Expected 40 players, got ${playersData.length} — fix data/players.json first`,
+    );
   }
 
   console.log("\n=== DEPLOYMENT SEQUENCE ===\n");
@@ -75,7 +89,10 @@ async function main() {
   // ──────────────────────────────────────────────────────────────
   console.log("2. Deploying StakingContract...");
   const StakingContract = await ethers.getContractFactory("StakingContract");
-  const stakingContract = await StakingContract.deploy(deployments.prizePool, deployer.address);
+  const stakingContract = await StakingContract.deploy(
+    deployments.prizePool,
+    deployer.address,
+  );
   await stakingContract.waitForDeployment();
   deployments.stakingContract = await stakingContract.getAddress();
   fs.writeFileSync(deploymentsPath, JSON.stringify(deployments, null, 2));
@@ -89,7 +106,10 @@ async function main() {
   // ──────────────────────────────────────────────────────────────
   console.log("3. Deploying PSLOracle...");
   const PSLOracle = await ethers.getContractFactory("PSLOracle");
-  const oracle = await PSLOracle.deploy(deployments.prizePool, deployer.address);
+  const oracle = await PSLOracle.deploy(
+    deployments.prizePool,
+    deployer.address,
+  );
   await oracle.waitForDeployment();
   deployments.oracle = await oracle.getAddress();
   fs.writeFileSync(deploymentsPath, JSON.stringify(deployments, null, 2));
@@ -117,7 +137,10 @@ async function main() {
   // ──────────────────────────────────────────────────────────────
   console.log("5. Deploying MarketContract...");
   const MarketContract = await ethers.getContractFactory("MarketContract");
-  const marketContract = await MarketContract.deploy(deployments.prizePool, deployer.address);
+  const marketContract = await MarketContract.deploy(
+    deployments.prizePool,
+    deployer.address,
+  );
   await marketContract.waitForDeployment();
   deployments.marketContract = await marketContract.getAddress();
   fs.writeFileSync(deploymentsPath, JSON.stringify(deployments, null, 2));
@@ -130,11 +153,13 @@ async function main() {
   // 6. PlayerTokenFactory
   // ──────────────────────────────────────────────────────────────
   console.log("6. Deploying PlayerTokenFactory...");
-  const PlayerTokenFactory = await ethers.getContractFactory("PlayerTokenFactory");
+  const PlayerTokenFactory = await ethers.getContractFactory(
+    "PlayerTokenFactory",
+  );
   const factory = await PlayerTokenFactory.deploy(
     deployments.oracle,
     deployments.marketContract,
-    deployer.address
+    deployer.address,
   );
   await factory.waitForDeployment();
   deployments.playerTokenFactory = await factory.getAddress();
@@ -142,7 +167,10 @@ async function main() {
   const factoryTx = factory.deploymentTransaction()!;
   await factoryTx.wait();
   await appendTxHash(txHashesPath, "DEPLOY:PlayerTokenFactory", factoryTx.hash);
-  console.log("✅ PlayerTokenFactory deployed to:", deployments.playerTokenFactory);
+  console.log(
+    "✅ PlayerTokenFactory deployed to:",
+    deployments.playerTokenFactory,
+  );
 
   // ──────────────────────────────────────────────────────────────
   // 7. Configure cross-references
@@ -160,7 +188,11 @@ async function main() {
 
   const tx3 = await stakingContract.setOracle(deployments.oracle);
   await tx3.wait();
-  await appendTxHash(txHashesPath, "CONFIG:StakingContract.setOracle", tx3.hash);
+  await appendTxHash(
+    txHashesPath,
+    "CONFIG:StakingContract.setOracle",
+    tx3.hash,
+  );
 
   const tx4 = await oracle.setStaking(deployments.stakingContract);
   await tx4.wait();
@@ -187,7 +219,11 @@ async function main() {
     console.log(`   Deploying batch ${i} to ${end}...`);
     const tx = await factory.deployBatch(playersData, i, end);
     await tx.wait();
-    await appendTxHash(txHashesPath, `FACTORY:deployBatch_${i}_${end}`, tx.hash);
+    await appendTxHash(
+      txHashesPath,
+      `FACTORY:deployBatch_${i}_${end}`,
+      tx.hash,
+    );
   }
   console.log("✅ All player tokens deployed in batches");
 
@@ -198,17 +234,26 @@ async function main() {
   for (const player of playersData) {
     const tokenAddr = await factory.getPlayerToken(player.id);
     deployments.playerTokens[player.id.toString()] = tokenAddr;
-    console.log(`  [${player.id}] ${player.symbol} (${player.name}) → ${tokenAddr}`);
+    console.log(
+      `  [${player.id}] ${player.symbol} (${player.name}) → ${tokenAddr}`,
+    );
 
     // Also register player token in StakingContract
-    const regTx = await stakingContract.registerPlayerToken(player.id, tokenAddr);
+    const regTx = await stakingContract.registerPlayerToken(
+      player.id,
+      tokenAddr,
+    );
     await regTx.wait();
   }
 
   // Final save of complete deployments
   fs.writeFileSync(deploymentsPath, JSON.stringify(deployments, null, 2));
   console.log("\n✅ deployments.json saved with all addresses");
-  await appendTxHash(txHashesPath, "INFO:DeploymentComplete", "all-addresses-in-deployments.json");
+  await appendTxHash(
+    txHashesPath,
+    "INFO:DeploymentComplete",
+    "all-addresses-in-deployments.json",
+  );
 
   // ──────────────────────────────────────────────────────────────
   // Summary table
@@ -217,15 +262,17 @@ async function main() {
   console.log("║       PSL CHAIN — DEPLOYMENT SUMMARY        ║");
   console.log("╠══════════════════════════════════════════════╣");
   console.table({
-    "PrizePool":           deployments.prizePool,
-    "StakingContract":     deployments.stakingContract,
-    "PSLOracle":           deployments.oracle,
-    "ChampionNFT":         deployments.championNFT,
-    "MarketContract":      deployments.marketContract,
-    "PlayerTokenFactory":  deployments.playerTokenFactory,
+    PrizePool: deployments.prizePool,
+    StakingContract: deployments.stakingContract,
+    PSLOracle: deployments.oracle,
+    ChampionNFT: deployments.championNFT,
+    MarketContract: deployments.marketContract,
+    PlayerTokenFactory: deployments.playerTokenFactory,
   });
   console.log("╚══════════════════════════════════════════════╝");
-  console.log(`\n🎉 Deployment complete! ${playersData.length} player tokens deployed.`);
+  console.log(
+    `\n🎉 Deployment complete! ${playersData.length} player tokens deployed.`,
+  );
   console.log("📄 Addresses saved to deployments.json");
   console.log("📝 TX hashes saved to txhashes.txt");
   console.log("\nNext step: npm run seed");

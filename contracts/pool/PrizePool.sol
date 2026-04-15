@@ -8,20 +8,12 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * @title PrizePool
  * @notice Accumulates trading fees and distributes match + season rewards.
  *
- * Fee split per trade: 40% → matchPool, 40% → seasonPool, 20% → platformFee
+ * Fee split per trade: 80% → matchPool, 20% → platformFee
  *
- * Match rewards:
+ * Match rewards (Daily):
  *   - Proportional to (staked tokens × player FPS score)
  *   - Guard: require(!matchDistributed[seasonId][matchId])
  *   - Edge case: if totalFpsWeightSum == 0, return early (no divide by zero)
- *
- * Season rewards:
- *   - Top 3: 25%, 15%, 10% of seasonPool
- *   - Ranks 4-10: 5% each (35% total)
- *   - Ranks 11-20: 1% each (10% total)
- *   - 5% rollover to next season's pool
- *   - Guard: require(!seasons[seasonId].seasonDistributed)
- *   - Rollover is applied BEFORE marking as distributed
  *
  * Claim rewards (CEI):
  *   - pendingRewards[msg.sender] = 0 BEFORE the external .call{}
@@ -29,10 +21,8 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 contract PrizePool is Ownable, ReentrancyGuard {
     struct Season {
         uint256 matchPool;
-        uint256 seasonPool;
         uint256 platformFee;
         uint256 totalFees;
-        bool    seasonDistributed;
     }
 
     mapping(uint8 => Season) public seasons;
@@ -46,9 +36,8 @@ contract PrizePool is Ownable, ReentrancyGuard {
     // Prevent double-distribution per match
     mapping(uint8 => mapping(uint8 => bool)) public matchDistributed;
 
-    event FeeReceived(uint8 season, uint256 amount, uint256 matchShare, uint256 seasonShare);
+    event FeeReceived(uint8 season, uint256 amount, uint256 matchShare);
     event MatchRewardsDistributed(uint8 season, uint8 matchId, uint256 totalDistributed);
-    event SeasonRewardsDistributed(uint8 season, uint256 totalDistributed);
     event RewardClaimed(address wallet, uint256 amount);
     event RewardAllocated(address wallet, uint256 amount, string reason);
 
@@ -63,16 +52,14 @@ contract PrizePool is Ownable, ReentrancyGuard {
     function receiveFee(uint8 seasonId) external payable onlyMarketOrOwner {
         require(msg.value > 0, "No fee sent");
 
-        uint256 matchShare  = (msg.value * 40) / 100;
-        uint256 seasonShare = (msg.value * 40) / 100;
-        uint256 platformShare = msg.value - matchShare - seasonShare; // exact 20%
+        uint256 matchShare  = (msg.value * 80) / 100;
+        uint256 platformShare = msg.value - matchShare; // exact 20%
 
         seasons[seasonId].matchPool   += matchShare;
-        seasons[seasonId].seasonPool  += seasonShare;
         seasons[seasonId].platformFee += platformShare;
         seasons[seasonId].totalFees   += msg.value;
 
-        emit FeeReceived(seasonId, msg.value, matchShare, seasonShare);
+        emit FeeReceived(seasonId, msg.value, matchShare);
     }
 
     // ─── Match Reward Distribution ────────────────────────────────────────────
@@ -156,52 +143,6 @@ contract PrizePool is Ownable, ReentrancyGuard {
         matchDistributed[seasonId][matchId] = true;
 
         emit MatchRewardsDistributed(seasonId, matchId, totalDistributed);
-    }
-
-    // ─── Season Reward Distribution ──────────────────────────────────────────
-
-    /// @notice Distribute season pool to top ranked wallets. 5% rollover to next season.
-    function distributeSeasonRewards(
-        uint8 seasonId,
-        address[] calldata rankedWallets  // ordered 1st to last by portfolio value
-    ) external onlyOwner nonReentrant {
-        require(!seasons[seasonId].seasonDistributed, "Already distributed");
-        require(rankedWallets.length >= 1, "No wallets provided");
-
-        uint256 pool = seasons[seasonId].seasonPool;
-        require(pool > 0, "No season pool");
-
-        // 5% rollover — apply BEFORE marking distributed
-        uint256 rollover = (pool * 5) / 100;
-        seasons[uint8(seasonId + 1)].seasonPool += rollover;
-
-        uint256 distributed = 0;
-        uint256[3] memory topPct = [uint256(25), 15, 10];
-
-        // Ranks 1-3
-        for (uint256 i = 0; i < 3 && i < rankedWallets.length; i++) {
-            uint256 reward = (pool * topPct[i]) / 100;
-            pendingRewards[rankedWallets[i]] += reward;
-            distributed += reward;
-        }
-        // Ranks 4-10 (5% each)
-        for (uint256 i = 3; i < 10 && i < rankedWallets.length; i++) {
-            uint256 reward = (pool * 5) / 100;
-            pendingRewards[rankedWallets[i]] += reward;
-            distributed += reward;
-        }
-        // Ranks 11-20 (1% each)
-        for (uint256 i = 10; i < 20 && i < rankedWallets.length; i++) {
-            uint256 reward = (pool * 1) / 100;
-            pendingRewards[rankedWallets[i]] += reward;
-            distributed += reward;
-        }
-
-        seasons[seasonId].seasonPool -= distributed + rollover;
-        seasons[seasonId].seasonDistributed = true;
-        totalRewardsDistributed += distributed;
-
-        emit SeasonRewardsDistributed(seasonId, distributed);
     }
 
     // ─── Claim (CEI) ─────────────────────────────────────────────────────────

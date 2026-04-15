@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import CountUp from "@/components/CountUp";
 import FlipCountdown from "@/components/FlipCountdown";
@@ -6,7 +6,6 @@ import { useGetPrizePool, useLeaderboard } from "@/hooks/useContract";
 import { truncateAddress } from "@/utils/format";
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-
 
 const PRIZE_SEGMENTS = [
   { label: "#1 — 25%", pct: 25, color: "hsl(42 92% 56%)" },
@@ -18,16 +17,15 @@ const PRIZE_SEGMENTS = [
 ];
 
 export default function Leaderboard() {
-  const [tab, setTab] = useState<"season" | "daily">("season");
   const [loaded, setLoaded] = useState(false);
   const [seasonEnd, setSeasonEnd] = useState<Date>(new Date());
-  
+
   const { address } = useAccount();
-  const { seasonPool, matchPool } = useGetPrizePool();
+  const { matchPool } = useGetPrizePool();
   const { data: leaderboardData = [], isLoading, refetch } = useLeaderboard();
 
   // Debug logging
-  console.log('Leaderboard Debug:', {
+  console.log("Leaderboard Debug:", {
     leaderboardData,
     isLoading,
     dataLength: leaderboardData.length,
@@ -47,7 +45,7 @@ export default function Leaderboard() {
     if (!matchPool) return 0;
     if (rank === 1) return matchPool * 0.25;
     if (rank === 2) return matchPool * 0.15;
-    if (rank === 3) return matchPool * 0.10;
+    if (rank === 3) return matchPool * 0.1;
     if (rank >= 4 && rank <= 10) return matchPool * 0.05;
     if (rank >= 11 && rank <= 20) return matchPool * 0.01;
     return 0;
@@ -59,7 +57,7 @@ export default function Leaderboard() {
       <div className="mb-4 flex items-center justify-between bg-muted/50 rounded-lg p-3">
         <div className="text-xs text-muted-foreground">
           <div>Leaderboard Entries: {leaderboardData.length}</div>
-          <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
+          <div>Loading: {isLoading ? "Yes" : "No"}</div>
         </div>
         <button
           onClick={() => refetch()}
@@ -71,18 +69,21 @@ export default function Leaderboard() {
 
       {/* Banner */}
       <div className="mb-8 text-center animate-in fade-in slide-in-from-top duration-700">
-        <p className="text-sm text-muted-foreground">Season Prize Pool</p>
+        <p className="text-sm text-muted-foreground">Daily Match Prize Pool</p>
         <p className="text-4xl font-bold text-primary font-display">
-          <CountUp end={matchPool > 0 ? matchPool : 2500} suffix=" WC" decimals={0} />
-        </p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Today's Match Pool: <span className="text-foreground font-semibold">{matchPool > 0 ? matchPool.toLocaleString() : "2,500"} WC</span>
+          <CountUp
+            end={matchPool > 0 ? matchPool : 2500}
+            suffix=" WC"
+            decimals={0}
+          />
         </p>
       </div>
 
       {/* Prize distribution */}
       <div className="mb-8 card-surface rounded-xl p-5">
-        <h3 className="mb-3 text-sm font-semibold text-foreground">Prize Distribution</h3>
+        <h3 className="mb-3 text-sm font-semibold text-foreground">
+          Prize Distribution
+        </h3>
         <div className="flex h-8 w-full overflow-hidden rounded-full">
           {PRIZE_SEGMENTS.map((s) => (
             <div
@@ -97,8 +98,14 @@ export default function Leaderboard() {
         </div>
         <div className="mt-3 flex flex-wrap gap-3">
           {PRIZE_SEGMENTS.map((s) => (
-            <div key={s.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+            <div
+              key={s.label}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground"
+            >
+              <div
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: s.color }}
+              />
               {s.label}
             </div>
           ))}
@@ -107,17 +114,9 @@ export default function Leaderboard() {
 
       {/* Tabs */}
       <div className="mb-6 flex rounded-lg bg-muted p-1 max-w-xs">
-        {(["season", "daily"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 rounded-md py-2 text-sm font-semibold transition-colors capitalize ${
-              tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-            }`}
-          >
-            {t === "season" ? "Season Rankings" : "Daily Match"}
-          </button>
-        ))}
+        <button className="flex-1 rounded-md py-2 text-sm font-semibold transition-colors capitalize bg-primary text-primary-foreground">
+          Daily Match Rankings
+        </button>
       </div>
 
       {!loaded || isLoading ? (
@@ -134,19 +133,23 @@ export default function Leaderboard() {
                 <th className="p-3">Rank</th>
                 <th className="p-3">Wallet</th>
                 <th className="p-3">Portfolio Value</th>
-                <th className="p-3">Est. Season Prize</th>
+                <th className="p-3">Est. Match Prize</th>
               </tr>
             </thead>
             <tbody>
               {leaderboardData.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                  <td
+                    colSpan={4}
+                    className="p-6 text-center text-muted-foreground"
+                  >
                     No leaderboard data yet. Start trading to be the first!
                   </td>
                 </tr>
               ) : null}
               {leaderboardData.map((r, i) => {
-                const isYou = address && r.wallet.toLowerCase() === address.toLowerCase();
+                const isYou =
+                  address && r.wallet.toLowerCase() === address.toLowerCase();
                 const seasonPrize = getEstSeasonPrize(r.rank);
                 return (
                   <tr
@@ -168,11 +171,26 @@ export default function Leaderboard() {
                       )}
                     </td>
                     <td className="p-3 text-foreground font-mono text-xs truncate max-w-[140px]">
-                      {isYou ? truncateAddress(r.wallet) : r.wallet} 
-                      {isYou && <span className="ml-2 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">YOU</span>}
+                      {isYou ? truncateAddress(r.wallet) : r.wallet}
+                      {isYou && (
+                        <span className="ml-2 rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold text-primary">
+                          YOU
+                        </span>
+                      )}
                     </td>
-                    <td className="p-3 text-foreground font-medium">{r.portfolio_value.toLocaleString(undefined, { maximumFractionDigits: 2 })} WC</td>
-                    <td className="p-3 text-primary">{seasonPrize > 0 ? `${seasonPrize.toLocaleString(undefined, { maximumFractionDigits: 2 })} WC` : "—"}</td>
+                    <td className="p-3 text-foreground font-medium">
+                      {r.portfolio_value.toLocaleString(undefined, {
+                        maximumFractionDigits: 2,
+                      })}{" "}
+                      WC
+                    </td>
+                    <td className="p-3 text-primary">
+                      {seasonPrize > 0
+                        ? `${seasonPrize.toLocaleString(undefined, {
+                            maximumFractionDigits: 2,
+                          })} WC`
+                        : "—"}
+                    </td>
                   </tr>
                 );
               })}
@@ -183,7 +201,7 @@ export default function Leaderboard() {
 
       {/* Countdown */}
       <div className="mt-12 text-center">
-        <p className="text-sm text-muted-foreground mb-4">Season Ends In</p>
+        <p className="text-sm text-muted-foreground mb-4">Match Ends In</p>
         <FlipCountdown targetDate={seasonEnd} className="justify-center" />
       </div>
     </div>

@@ -1,0 +1,617 @@
+[
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "prizePool_",
+                           "type":  "address"
+                       },
+                       {
+                           "internalType":  "address",
+                           "name":  "initialOwner_",
+                           "type":  "address"
+                       }
+                   ],
+        "stateMutability":  "nonpayable",
+        "type":  "constructor"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "owner",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "OwnableInvalidOwner",
+        "type":  "error"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "account",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "OwnableUnauthorizedAccount",
+        "type":  "error"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  true,
+                           "internalType":  "uint8",
+                           "name":  "matchId",
+                           "type":  "uint8"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint256",
+                           "name":  "playersProcessed",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "BatchMatchProcessed",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  true,
+                           "internalType":  "uint8",
+                           "name":  "matchId",
+                           "type":  "uint8"
+                       },
+                       {
+                           "indexed":  true,
+                           "internalType":  "uint8",
+                           "name":  "playerId",
+                           "type":  "uint8"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint256",
+                           "name":  "fps",
+                           "type":  "uint256"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint256",
+                           "name":  "multiplier",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "MatchProcessed",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
+                           "name":  "previousOwner",
+                           "type":  "address"
+                       },
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
+                           "name":  "newOwner",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "OwnershipTransferred",
+        "type":  "event"
+    },
+    {
+        "inputs":  [
+                       {
+                           "components":  [
+                                              {
+                                                  "internalType":  "uint8",
+                                                  "name":  "matchId",
+                                                  "type":  "uint8"
+                                              },
+                                              {
+                                                  "internalType":  "uint8",
+                                                  "name":  "playerId",
+                                                  "type":  "uint8"
+                                              },
+                                              {
+                                                  "internalType":  "address",
+                                                  "name":  "playerTokenAddr",
+                                                  "type":  "address"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "runs",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "balls",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "wickets",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "dotsBowled",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "runsConc",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "oversBowled",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "catches",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "stumpings",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "runOuts",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "droppedCatches",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "bool",
+                                                  "name":  "notOut",
+                                                  "type":  "bool"
+                                              },
+                                              {
+                                                  "internalType":  "bool",
+                                                  "name":  "matchWon",
+                                                  "type":  "bool"
+                                              },
+                                              {
+                                                  "internalType":  "bool",
+                                                  "name":  "topScorer",
+                                                  "type":  "bool"
+                                              },
+                                              {
+                                                  "internalType":  "bool",
+                                                  "name":  "deathOver",
+                                                  "type":  "bool"
+                                              }
+                                          ],
+                           "internalType":  "struct PSLOracle.MatchResult",
+                           "name":  "r",
+                           "type":  "tuple"
+                       }
+                   ],
+        "name":  "calculateFPS",
+        "outputs":  [
+                        {
+                            "internalType":  "uint256",
+                            "name":  "fps",
+                            "type":  "uint256"
+                        },
+                        {
+                            "internalType":  "uint256",
+                            "name":  "multiplier",
+                            "type":  "uint256"
+                        }
+                    ],
+        "stateMutability":  "pure",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "championNFT",
+        "outputs":  [
+                        {
+                            "internalType":  "contract ChampionNFT",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "currentMatch",
+        "outputs":  [
+                        {
+                            "internalType":  "uint8",
+                            "name":  "",
+                            "type":  "uint8"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "owner",
+        "outputs":  [
+                        {
+                            "internalType":  "address",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "playerMatchFps",
+        "outputs":  [
+                        {
+                            "internalType":  "uint256",
+                            "name":  "",
+                            "type":  "uint256"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "playerMultiplier",
+        "outputs":  [
+                        {
+                            "internalType":  "uint256",
+                            "name":  "",
+                            "type":  "uint256"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "components":  [
+                                              {
+                                                  "internalType":  "uint8",
+                                                  "name":  "matchId",
+                                                  "type":  "uint8"
+                                              },
+                                              {
+                                                  "internalType":  "uint8",
+                                                  "name":  "playerId",
+                                                  "type":  "uint8"
+                                              },
+                                              {
+                                                  "internalType":  "address",
+                                                  "name":  "playerTokenAddr",
+                                                  "type":  "address"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "runs",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "balls",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "wickets",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "dotsBowled",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "runsConc",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "oversBowled",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "catches",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "stumpings",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "runOuts",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "droppedCatches",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "bool",
+                                                  "name":  "notOut",
+                                                  "type":  "bool"
+                                              },
+                                              {
+                                                  "internalType":  "bool",
+                                                  "name":  "matchWon",
+                                                  "type":  "bool"
+                                              },
+                                              {
+                                                  "internalType":  "bool",
+                                                  "name":  "topScorer",
+                                                  "type":  "bool"
+                                              },
+                                              {
+                                                  "internalType":  "bool",
+                                                  "name":  "deathOver",
+                                                  "type":  "bool"
+                                              }
+                                          ],
+                           "internalType":  "struct PSLOracle.MatchResult",
+                           "name":  "r",
+                           "type":  "tuple"
+                       }
+                   ],
+        "name":  "previewFPS",
+        "outputs":  [
+                        {
+                            "internalType":  "uint256",
+                            "name":  "fps",
+                            "type":  "uint256"
+                        },
+                        {
+                            "internalType":  "uint256",
+                            "name":  "multiplier",
+                            "type":  "uint256"
+                        },
+                        {
+                            "internalType":  "string",
+                            "name":  "tier",
+                            "type":  "string"
+                        }
+                    ],
+        "stateMutability":  "pure",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "prizePool",
+        "outputs":  [
+                        {
+                            "internalType":  "contract PrizePool",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "components":  [
+                                              {
+                                                  "internalType":  "uint8",
+                                                  "name":  "matchId",
+                                                  "type":  "uint8"
+                                              },
+                                              {
+                                                  "internalType":  "uint8",
+                                                  "name":  "playerId",
+                                                  "type":  "uint8"
+                                              },
+                                              {
+                                                  "internalType":  "address",
+                                                  "name":  "playerTokenAddr",
+                                                  "type":  "address"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "runs",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "balls",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "wickets",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "dotsBowled",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "runsConc",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "oversBowled",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "catches",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "stumpings",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "runOuts",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "uint32",
+                                                  "name":  "droppedCatches",
+                                                  "type":  "uint32"
+                                              },
+                                              {
+                                                  "internalType":  "bool",
+                                                  "name":  "notOut",
+                                                  "type":  "bool"
+                                              },
+                                              {
+                                                  "internalType":  "bool",
+                                                  "name":  "matchWon",
+                                                  "type":  "bool"
+                                              },
+                                              {
+                                                  "internalType":  "bool",
+                                                  "name":  "topScorer",
+                                                  "type":  "bool"
+                                              },
+                                              {
+                                                  "internalType":  "bool",
+                                                  "name":  "deathOver",
+                                                  "type":  "bool"
+                                              }
+                                          ],
+                           "internalType":  "struct PSLOracle.MatchResult[]",
+                           "name":  "results",
+                           "type":  "tuple[]"
+                       }
+                   ],
+        "name":  "pushMatchResults",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "renounceOwnership",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "n",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "setNFT",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "s",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "setStaking",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "stakingContract",
+        "outputs":  [
+                        {
+                            "internalType":  "contract StakingContract",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "newOwner",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "transferOwnership",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    }
+]

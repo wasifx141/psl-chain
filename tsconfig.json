@@ -24,6 +24,9 @@
       }
     ],
     "paths": {
+      "@/config/abis/*": [
+        "./src/config/abis/*"
+      ],
       "@/*": [
         "./*"
       ]

@@ -1,0 +1,659 @@
+[
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "prizePool_",
+                           "type":  "address"
+                       },
+                       {
+                           "internalType":  "address",
+                           "name":  "initialOwner_",
+                           "type":  "address"
+                       }
+                   ],
+        "stateMutability":  "nonpayable",
+        "type":  "constructor"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "owner",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "OwnableInvalidOwner",
+        "type":  "error"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "account",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "OwnableUnauthorizedAccount",
+        "type":  "error"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "ReentrancyGuardReentrantCall",
+        "type":  "error"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint8",
+                           "name":  "matchId",
+                           "type":  "uint8"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint256",
+                           "name":  "totalStakerCount",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "MatchResultsProcessed",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
+                           "name":  "previousOwner",
+                           "type":  "address"
+                       },
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
+                           "name":  "newOwner",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "OwnershipTransferred",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint8",
+                           "name":  "playerId",
+                           "type":  "uint8"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "address",
+                           "name":  "tokenAddr",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "PlayerTokenRegistered",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
+                           "name":  "wallet",
+                           "type":  "address"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint8",
+                           "name":  "matchId",
+                           "type":  "uint8"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint8",
+                           "name":  "playerId",
+                           "type":  "uint8"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint256",
+                           "name":  "amount",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "Staked",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
+                           "name":  "wallet",
+                           "type":  "address"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint8",
+                           "name":  "matchId",
+                           "type":  "uint8"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint8",
+                           "name":  "playerId",
+                           "type":  "uint8"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint256",
+                           "name":  "amount",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "Unstaked",
+        "type":  "event"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "playerTokenAddr",
+                           "type":  "address"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "playerId_",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "matchId_",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "claimAndUnstake",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "matchId_",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "getMatchStakers",
+        "outputs":  [
+                        {
+                            "internalType":  "address[]",
+                            "name":  "",
+                            "type":  "address[]"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "matchId_",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "playerId_",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "getPlayerStakers",
+        "outputs":  [
+                        {
+                            "internalType":  "address[]",
+                            "name":  "",
+                            "type":  "address[]"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "wallet",
+                           "type":  "address"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "matchId_",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "playerId_",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "getStake",
+        "outputs":  [
+                        {
+                            "components":  [
+                                               {
+                                                   "internalType":  "uint256",
+                                                   "name":  "amount",
+                                                   "type":  "uint256"
+                                               },
+                                               {
+                                                   "internalType":  "uint8",
+                                                   "name":  "playerId",
+                                                   "type":  "uint8"
+                                               },
+                                               {
+                                                   "internalType":  "uint8",
+                                                   "name":  "matchId",
+                                                   "type":  "uint8"
+                                               },
+                                               {
+                                                   "internalType":  "bool",
+                                                   "name":  "claimed",
+                                                   "type":  "bool"
+                                               }
+                                           ],
+                            "internalType":  "struct StakingContract.Stake",
+                            "name":  "",
+                            "type":  "tuple"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "address",
+                           "name":  "",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "isMatchStaker",
+        "outputs":  [
+                        {
+                            "internalType":  "bool",
+                            "name":  "",
+                            "type":  "bool"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint256",
+                           "name":  "",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "matchStakers",
+        "outputs":  [
+                        {
+                            "internalType":  "address",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "matches",
+        "outputs":  [
+                        {
+                            "internalType":  "uint256",
+                            "name":  "startTime",
+                            "type":  "uint256"
+                        },
+                        {
+                            "internalType":  "bool",
+                            "name":  "resultsIn",
+                            "type":  "bool"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "oracleAddress",
+        "outputs":  [
+                        {
+                            "internalType":  "address",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "owner",
+        "outputs":  [
+                        {
+                            "internalType":  "address",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint256",
+                           "name":  "",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "playerStakers",
+        "outputs":  [
+                        {
+                            "internalType":  "address",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "playerTokenAddresses",
+        "outputs":  [
+                        {
+                            "internalType":  "address",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "prizePool",
+        "outputs":  [
+                        {
+                            "internalType":  "contract PrizePool",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "matchId_",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint8[]",
+                           "name":  "uniquePlayerIds",
+                           "type":  "uint8[]"
+                       },
+                       {
+                           "internalType":  "uint256[]",
+                           "name":  "fpScores",
+                           "type":  "uint256[]"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "seasonId",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "processMatchRewards",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "playerId_",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "address",
+                           "name":  "tokenAddr",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "registerPlayerToken",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "renounceOwnership",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "matchId",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint256",
+                           "name":  "startTime",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "setMatch",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "o",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "setOracle",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "playerTokenAddr",
+                           "type":  "address"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "playerId_",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "matchId_",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint256",
+                           "name":  "amount",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "stakeForMatch",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "",
+                           "type":  "address"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "stakes",
+        "outputs":  [
+                        {
+                            "internalType":  "uint256",
+                            "name":  "amount",
+                            "type":  "uint256"
+                        },
+                        {
+                            "internalType":  "uint8",
+                            "name":  "playerId",
+                            "type":  "uint8"
+                        },
+                        {
+                            "internalType":  "uint8",
+                            "name":  "matchId",
+                            "type":  "uint8"
+                        },
+                        {
+                            "internalType":  "bool",
+                            "name":  "claimed",
+                            "type":  "bool"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "totalStaked",
+        "outputs":  [
+                        {
+                            "internalType":  "uint256",
+                            "name":  "",
+                            "type":  "uint256"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "newOwner",
+                           "type":  "address"
+                       }
+                   ],
+        "name":  "transferOwnership",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    }
+]

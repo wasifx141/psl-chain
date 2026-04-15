@@ -282,10 +282,8 @@ export function useGetPrizePool() {
         name: "seasons",
         outputs: [
           { internalType: "uint256", name: "matchPool", type: "uint256" },
-          { internalType: "uint256", name: "seasonPool", type: "uint256" },
           { internalType: "uint256", name: "platformFee", type: "uint256" },
           { internalType: "uint256", name: "totalFees", type: "uint256" },
-          { internalType: "bool", name: "seasonDistributed", type: "bool" },
         ],
         stateMutability: "view",
         type: "function",
@@ -301,9 +299,6 @@ export function useGetPrizePool() {
   return {
     matchPool: seasonData
       ? Number(formatEther((seasonData as any)[0] as bigint))
-      : 0,
-    seasonPool: seasonData
-      ? Number(formatEther((seasonData as any)[1] as bigint))
       : 0,
     currentSeason: currentSeason ? Number(currentSeason) : 1,
   };

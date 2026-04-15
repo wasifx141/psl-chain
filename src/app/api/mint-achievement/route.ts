@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ethers } from 'ethers'
 import { contracts, playerTokenABI } from '@/config/contracts'
-import ChampionNFTABI from '../../../../artifacts/contracts/nft/ChampionNFT.sol/ChampionNFT.json'
+import ChampionNFTABI from '@/config/abis/ChampionNFT.json'
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Create contract instance
     const championNFT = new ethers.Contract(
       contracts.championNFT.address,
-      ChampionNFTABI.abi,
+      ChampionNFTABI,
       adminWallet
     )
 

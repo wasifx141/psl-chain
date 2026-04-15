@@ -157,7 +157,7 @@ export const contracts = {
   },
   championNFT: {
     address: deployments.championNFT as `0x${string}`,
-    // ChampionNFT ABI is imported directly from artifacts in the API route
+    // ChampionNFT ABI is imported from checked-in JSON in the API route
     abi: [] as const,
   },
 } as const;
