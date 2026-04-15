@@ -121,7 +121,10 @@ export default function Leaderboard() {
     if (rank <= topFivePercentCount) tierAllocation = 0.6;
     else if (rank <= nextTwentyPercentCount) tierAllocation = 0.3;
 
-    return Math.min((portfolioValue / totalPortfolioValue) * tierAllocation * 100, 25);
+    return Math.min(
+      (portfolioValue / totalPortfolioValue) * tierAllocation * 100,
+      25,
+    );
   }
 
   async function handleClaim() {
@@ -232,7 +235,8 @@ export default function Leaderboard() {
               </>
             ) : (
               <p className="text-xs italic text-muted-foreground">
-                Buy player tokens to appear on the leaderboard and claim rewards.
+                Buy player tokens to appear on the leaderboard and claim
+                rewards.
               </p>
             )}
           </div>
