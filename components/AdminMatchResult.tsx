@@ -7,11 +7,15 @@ import {
   calculateFantasyPoints,
 } from '@/lib/services/fantasyPoints.service';
 import type {
-  ManualMatchResult,
   ManualPlayerStat,
   MatchResult,
 } from '@/lib/types/matchResult';
-import { useSaveMatchResult, useFetchAndSaveMatchResult, useDeleteMatchResult, useAllMatchResults } from '@/hooks/useMatchResult';
+import {
+  useAllMatchResults,
+  useDeleteMatchResult,
+  useFetchAndSaveMatchResult,
+  useSaveMatchResult,
+} from '@/hooks/useMatchResult';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -21,16 +25,22 @@ interface Props {
   connectedWallet?: string;
 }
 
-// ─── Blank stat row ───────────────────────────────────────────────────────────
 function blankStat(playerId: string): ManualPlayerStat {
-  const player = PLAYERS.find((p) => p.id === playerId);
+  const player = PLAYERS.find((candidate) => candidate.id === playerId);
   return {
     playerId,
     playerName: player?.name ?? '',
     teamCode: player?.team ?? '',
-    runs: 0, balls: 0, fours: 0, sixes: 0,
-    wickets: 0, overs: 0, maidens: 0,
-    catches: 0, stumpings: 0, runOuts: 0,
+    runs: 0,
+    balls: 0,
+    fours: 0,
+    sixes: 0,
+    wickets: 0,
+    overs: 0,
+    maidens: 0,
+    catches: 0,
+    stumpings: 0,
+    runOuts: 0,
   };
 }
 
@@ -40,10 +50,10 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
 
   const { data: savedResults = [] } = useAllMatchResults();
   const { mutateAsync: saveResult, isPending: isSaving } = useSaveMatchResult();
-  const { mutateAsync: fetchAndSave, isPending: isFetching } = useFetchAndSaveMatchResult();
+  const { mutateAsync: fetchAndSave, isPending: isFetching } =
+    useFetchAndSaveMatchResult();
   const { mutateAsync: deleteResult } = useDeleteMatchResult();
 
-  // Form state
   const [selectedMatchId, setSelectedMatchId] = useState<number>(1);
   const [winner, setWinner] = useState('');
   const [t1Score, setT1Score] = useState('');
@@ -56,50 +66,58 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
 
   if (!isAdmin) return null;
 
-  const selectedMatch = MATCHES.find((m) => m.id === selectedMatchId);
+  const selectedMatch = MATCHES.find((match) => match.id === selectedMatchId);
   const matchPlayers = PLAYERS.filter(
-    (p) =>
+    (player) =>
       selectedMatch &&
-      (p.team === selectedMatch.team1 || p.team === selectedMatch.team2),
+      (player.team === selectedMatch.team1 || player.team === selectedMatch.team2),
   );
 
   const filteredMatchPlayers = matchPlayers.filter(
-    (p) =>
-      p.name.toLowerCase().includes(playerSearch.toLowerCase()) ||
-      p.team.toLowerCase().includes(playerSearch.toLowerCase())
+    (player) =>
+      player.name.toLowerCase().includes(playerSearch.toLowerCase()) ||
+      player.team.toLowerCase().includes(playerSearch.toLowerCase()),
   );
 
   function addPlayer() {
-    const id = addPlayerId || matchPlayers[0]?.id;
-    if (!id || stats.find((s) => s.playerId === id)) return;
-    setStats((prev) => [...prev, blankStat(id)]);
+    const playerId = addPlayerId || matchPlayers[0]?.id;
+    if (!playerId || stats.find((stat) => stat.playerId === playerId)) return;
+    setStats((previous) => [...previous, blankStat(playerId)]);
     setAddPlayerId('');
   }
 
   function updateStat(
-    idx: number,
+    index: number,
     field: keyof ManualPlayerStat,
     value: string | number,
   ) {
-    setStats((prev) =>
-      prev.map((s, i) =>
-        i === idx ? { ...s, [field]: typeof value === 'string' ? Number(value) : value } : s,
+    setStats((previous) =>
+      previous.map((stat, statIndex) =>
+        statIndex === index
+          ? {
+              ...stat,
+              [field]: typeof value === 'string' ? Number(value) : value,
+            }
+          : stat,
       ),
     );
   }
 
-  function removeStat(idx: number) {
-    setStats((prev) => prev.filter((_, i) => i !== idx));
+  function removeStat(index: number) {
+    setStats((previous) => previous.filter((_, statIndex) => statIndex !== index));
   }
 
-  // Add all match players at once
   function addAllMatchPlayers() {
-    const existing = new Set(stats.map((s) => s.playerId));
-    const toAdd = matchPlayers.filter((p) => !existing.has(p.id));
-    setStats((prev) => [...prev, ...toAdd.map((p) => blankStat(p.id))]);
+    const existingPlayers = new Set(stats.map((stat) => stat.playerId));
+    const playersToAdd = matchPlayers.filter(
+      (player) => !existingPlayers.has(player.id),
+    );
+    setStats((previous) => [
+      ...previous,
+      ...playersToAdd.map((player) => blankStat(player.id)),
+    ]);
   }
 
-  // Reset form for a new match
   function resetForm() {
     setStats([]);
     setWinner('');
@@ -108,22 +126,24 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
     setCricApiMatchId('');
   }
 
-  // Parse score string "187/4 (20)" → TeamScore fields
   function parseScore(scoreStr: string, teamCode: string, teamName: string) {
-    const m = scoreStr.match(/(\d+)\s*\/\s*(\d+)\s*\(?(\d+(?:\.\d+)?)?/);
+    const match = scoreStr.match(/(\d+)\s*\/\s*(\d+)\s*\(?(\d+(?:\.\d+)?)?/);
     return {
       teamCode,
       teamName,
-      score: m ? Number(m[1]) : 0,
-      wickets: m ? Number(m[2]) : 0,
-      overs: m && m[3] ? Number(m[3]) : 20,
+      score: match ? Number(match[1]) : 0,
+      wickets: match ? Number(match[2]) : 0,
+      overs: match && match[3] ? Number(match[3]) : 20,
     };
   }
 
   async function handleManualSave() {
-    if (!winner) { toast.error('Select a winner'); return; }
-    const performances = buildPlayerPerformances(stats);
+    if (!winner) {
+      toast.error('Select a winner');
+      return;
+    }
 
+    const performances = buildPlayerPerformances(stats);
     const result: MatchResult = {
       matchId: selectedMatchId,
       source: 'manual',
@@ -140,28 +160,34 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
     };
 
     await saveResult(result);
-    toast.success(`✅ Match ${selectedMatchId} result saved!`);
+    toast.success(`Match ${selectedMatchId} result saved.`);
     resetForm();
   }
 
   async function handleFetchFromApi() {
-    if (!cricApiMatchId) { toast.error('Enter a CricAPI match ID'); return; }
+    if (!cricApiMatchId) {
+      toast.error('Enter a CricAPI match ID');
+      return;
+    }
+
     try {
-      const result = await fetchAndSave({ matchId: selectedMatchId, cricApiMatchId });
-      toast.success(`✅ Fetched from CricAPI! Source: ${result.source}`);
+      const result = await fetchAndSave({
+        matchId: selectedMatchId,
+        cricApiMatchId,
+      });
+      toast.success(`Fetched from CricAPI. Source: ${result.source}`);
     } catch {
       toast.error('Failed to fetch from CricAPI. Used mock fallback.');
     }
   }
 
-  // Handle CSV Upload
   const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
+    reader.onload = (loadEvent) => {
+      const text = loadEvent.target?.result as string;
       if (!text) return;
 
       const lines = text.split('\n');
@@ -173,18 +199,17 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
       const newStats: ManualPlayerStat[] = [];
       let skipped = 0;
 
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
+      for (let index = 1; index < lines.length; index += 1) {
+        const line = lines[index].trim();
         if (!line) continue;
-        const values = line.split(',');
 
+        const values = line.split(',');
         const rowId = values[0]?.trim();
-        // Check if player is in our 40-player config
-        const knownPlayer = PLAYERS.find((p) => p.id === rowId);
+        const knownPlayer = PLAYERS.find((player) => player.id === rowId);
 
         if (!knownPlayer) {
-          skipped++;
-          continue; // SKIP remainings
+          skipped += 1;
+          continue;
         }
 
         newStats.push({
@@ -205,213 +230,256 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
       }
 
       setStats(newStats);
-      toast.success(`Loaded ${newStats.length} players from CSV. Skipped ${skipped} unknown players.`);
+      toast.success(
+        `Loaded ${newStats.length} players from CSV. Skipped ${skipped} unknown players.`,
+      );
     };
+
     reader.readAsText(file);
     event.target.value = '';
-  }
+  };
 
   return (
-    <div className="card-surface rounded-xl border border-amber-500/30 overflow-hidden">
-      {/* Toggle Header */}
+    <div className="card-surface overflow-hidden rounded-xl border border-amber-500/30">
       <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 bg-amber-500/10 hover:bg-amber-500/15 transition-colors"
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center justify-between gap-3 bg-amber-500/10 px-4 py-4 text-left transition-colors hover:bg-amber-500/15 sm:px-5"
       >
-        <div className="flex items-center gap-3">
-          <span className="text-xl">🛠️</span>
-          <div className="text-left">
-            <p className="font-semibold text-amber-400 text-sm">Admin Panel</p>
-            <p className="text-xs text-muted-foreground">
-              Save match results & distribute rewards
-            </p>
-          </div>
+        <div>
+          <p className="text-sm font-semibold text-amber-400">Admin Panel</p>
+          <p className="text-xs text-muted-foreground">
+            Save match results and distribute rewards
+          </p>
         </div>
-        <span className="text-muted-foreground text-lg">{open ? '▲' : '▼'}</span>
+        <span className="text-lg text-muted-foreground">{open ? 'Hide' : 'Show'}</span>
       </button>
 
-      {open && (
-        <div className="p-5 space-y-6">
-          {/* ── Tabs: Manual | CricAPI ── */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Match selector */}
-            <div className="col-span-2">
-              <label className="block text-xs text-muted-foreground mb-1 font-medium">Select Match</label>
-              <select
-                value={selectedMatchId}
-                onChange={(e) => { setSelectedMatchId(Number(e.target.value)); resetForm(); }}
-                className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground"
-              >
-                {MATCHES.filter((m) => m.team1 && m.team2).map((m) => (
-                  <option key={m.id} value={m.id}>
-                    #{m.id} {m.team1} vs {m.team2} — {m.dateStr}
-                  </option>
-                ))}
-              </select>
-            </div>
+      {open ? (
+        <div className="space-y-6 p-4 sm:p-5">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              Select Match
+            </label>
+            <select
+              value={selectedMatchId}
+              onChange={(event) => {
+                setSelectedMatchId(Number(event.target.value));
+                resetForm();
+              }}
+              className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground"
+            >
+              {MATCHES.filter((match) => match.team1 && match.team2).map((match) => (
+                <option key={match.id} value={match.id}>
+                  #{match.id} {match.team1} vs {match.team2} - {match.dateStr}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* ── Section A: Fetch from CricAPI ── */}
-          <div className="rounded-lg border border-green-500/20 p-4 bg-green-500/5 space-y-3">
-            <p className="text-xs font-semibold text-green-400 uppercase tracking-wider">
-              🌐 Fetch from CricAPI
+          <div className="space-y-3 rounded-lg border border-green-500/20 bg-green-500/5 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-green-400">
+              Fetch from CricAPI
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <input
                 value={cricApiMatchId}
-                onChange={(e) => setCricApiMatchId(e.target.value)}
-                placeholder="CricAPI Match ID (e.g. abc123-…)"
-                className="flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+                onChange={(event) => setCricApiMatchId(event.target.value)}
+                placeholder="CricAPI Match ID"
+                className="flex-1 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
               />
               <button
                 onClick={handleFetchFromApi}
                 disabled={isFetching}
-                className="bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
+                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-500 disabled:opacity-50"
               >
-                {isFetching ? 'Fetching…' : 'Fetch'}
+                {isFetching ? 'Fetching...' : 'Fetch'}
               </button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Uses mock data if key not configured or match data unavailable.
+              Uses mock data if the key is not configured or match data is unavailable.
             </p>
           </div>
 
-          {/* ── Section B: Upload CSV ── */}
-          <div className="rounded-lg border border-blue-500/20 p-4 bg-blue-500/5 space-y-3">
-            <div className="flex justify-between items-center">
-              <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
-                📄 Upload CSV Form
+          <div className="space-y-3 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wider text-blue-400">
+                Upload CSV Form
               </p>
-              <a href="/sample-match-result.csv" download className="text-xs text-blue-400 underline">
+              <a
+                href="/sample-match-result.csv"
+                download
+                className="text-xs text-blue-400 underline"
+              >
                 Download Sample CSV
               </a>
             </div>
-            <div>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleCsvUpload}
-                className="block w-full text-sm text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer"
-              />
-            </div>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleCsvUpload}
+              className="block w-full cursor-pointer text-sm text-foreground file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-500"
+            />
             <p className="text-xs text-muted-foreground">
-              Upload a CSV matching players.json format. Unregistered players will be skipped.
+              Upload a CSV matching players.json format. Unregistered players are skipped.
             </p>
           </div>
 
-          {/* ── Section C: Manual Entry ── */}
-          <div className="rounded-lg border border-amber-500/20 p-4 bg-amber-500/5 space-y-4">
-            <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
-              ✏️ Manual Entry
+          <div className="space-y-4 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">
+              Manual Entry
             </p>
 
-            {/* Winner & Scores */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
-                <label className="block text-xs text-muted-foreground mb-1">Winner (team code)</label>
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  Winner (team code)
+                </label>
                 <select
                   value={winner}
-                  onChange={(e) => setWinner(e.target.value)}
-                  className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground"
+                  onChange={(event) => setWinner(event.target.value)}
+                  className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground"
                 >
                   <option value="">-- Select --</option>
-                  {selectedMatch?.team1 && <option value={selectedMatch.team1}>{selectedMatch.team1}</option>}
-                  {selectedMatch?.team2 && <option value={selectedMatch.team2}>{selectedMatch.team2}</option>}
+                  {selectedMatch?.team1 ? (
+                    <option value={selectedMatch.team1}>{selectedMatch.team1}</option>
+                  ) : null}
+                  {selectedMatch?.team2 ? (
+                    <option value={selectedMatch.team2}>{selectedMatch.team2}</option>
+                  ) : null}
                 </select>
               </div>
+
               <div>
-                <label className="block text-xs text-muted-foreground mb-1">
+                <label className="mb-1 block text-xs text-muted-foreground">
                   {selectedMatch?.team1 ?? 'Team 1'} Score
                 </label>
                 <input
                   value={t1Score}
-                  onChange={(e) => setT1Score(e.target.value)}
+                  onChange={(event) => setT1Score(event.target.value)}
                   placeholder="187/4 (20)"
-                  className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+                  className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
                 />
               </div>
+
               <div>
-                <label className="block text-xs text-muted-foreground mb-1">
+                <label className="mb-1 block text-xs text-muted-foreground">
                   {selectedMatch?.team2 ?? 'Team 2'} Score
                 </label>
                 <input
                   value={t2Score}
-                  onChange={(e) => setT2Score(e.target.value)}
+                  onChange={(event) => setT2Score(event.target.value)}
                   placeholder="155/8 (20)"
-                  className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+                  className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
                 />
               </div>
             </div>
 
-            {/* Player Stats */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-muted-foreground">Player Stats</p>
+              <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs font-semibold text-muted-foreground">
+                  Player Stats
+                </p>
                 <button
                   onClick={addAllMatchPlayers}
-                  className="text-xs text-primary underline underline-offset-2 hover:text-primary/80"
+                  className="text-left text-xs text-primary underline underline-offset-2 hover:text-primary/80 sm:text-right"
                 >
-                  + Add All Match Players
+                  Add All Match Players
                 </button>
               </div>
 
-              {/* Add single player */}
-              <div className="flex flex-col gap-2 mb-3">
+              <div className="mb-3 flex flex-col gap-2">
                 <input
                   type="text"
                   placeholder="Search match players..."
                   value={playerSearch}
-                  onChange={(e) => setPlayerSearch(e.target.value)}
-                  className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  onChange={(event) => setPlayerSearch(event.target.value)}
+                  className="w-full rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
-                <div className="flex gap-2">
+
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <select
                     value={addPlayerId}
-                    onChange={(e) => setAddPlayerId(e.target.value)}
-                    className="flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground"
+                    onChange={(event) => setAddPlayerId(event.target.value)}
+                    className="flex-1 rounded-lg border border-border bg-muted/50 px-3 py-2 text-sm text-foreground"
                   >
-                    <option value="">Pick a player…</option>
-                    {filteredMatchPlayers.map((p) => (
-                      <option key={p.id} value={p.id} disabled={!!stats.find((s) => s.playerId === p.id)}>
-                        {p.name} ({p.team})
+                    <option value="">Pick a player...</option>
+                    {filteredMatchPlayers.map((player) => (
+                      <option
+                        key={player.id}
+                        value={player.id}
+                        disabled={!!stats.find((stat) => stat.playerId === player.id)}
+                      >
+                        {player.name} ({player.team})
                       </option>
                     ))}
                   </select>
                   <button
                     onClick={addPlayer}
-                    className="bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary text-sm font-semibold px-4 py-2 rounded-lg transition-colors shrink-0"
+                    className="shrink-0 rounded-lg border border-primary/30 bg-primary/20 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/30"
                   >
-                    + Add
+                    Add Player
                   </button>
                 </div>
               </div>
 
-              {/* Stat rows */}
-              {stats.length > 0 && (
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {stats.map((stat, idx) => {
-                    const pts = calculateFantasyPoints(stat);
+              {stats.length > 0 ? (
+                <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                  {stats.map((stat, index) => {
+                    const points = calculateFantasyPoints(stat);
                     return (
-                      <div key={stat.playerId} className="bg-muted/30 rounded-lg p-3 border border-border/50">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-sm font-medium text-foreground">{stat.playerName}</p>
+                      <div
+                        key={stat.playerId}
+                        className="rounded-lg border border-border/50 bg-muted/30 p-3"
+                      >
+                        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              {stat.playerName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {stat.teamCode}
+                            </p>
+                          </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                              {pts} pts
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                              {points} pts
                             </span>
-                            <button onClick={() => removeStat(idx)} className="text-red-400 hover:text-red-300 text-xs">✕</button>
+                            <button
+                              onClick={() => removeStat(index)}
+                              className="text-xs text-red-400 hover:text-red-300"
+                            >
+                              Remove
+                            </button>
                           </div>
                         </div>
-                        <div className="grid grid-cols-5 gap-1.5 text-xs">
-                          {(['runs','balls','fours','sixes','wickets','overs','maidens','catches','stumpings','runOuts'] as const).map((field) => (
+
+                        <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 xl:grid-cols-5">
+                          {(
+                            [
+                              'runs',
+                              'balls',
+                              'fours',
+                              'sixes',
+                              'wickets',
+                              'overs',
+                              'maidens',
+                              'catches',
+                              'stumpings',
+                              'runOuts',
+                            ] as const
+                          ).map((field) => (
                             <div key={field}>
-                              <label className="block text-muted-foreground capitalize mb-0.5">{field}</label>
+                              <label className="mb-0.5 block capitalize text-muted-foreground">
+                                {field}
+                              </label>
                               <input
                                 type="number"
                                 min={0}
                                 value={stat[field] ?? 0}
-                                onChange={(e) => updateStat(idx, field, e.target.value)}
-                                className="w-full bg-muted/50 border border-border rounded px-2 py-1 text-foreground text-xs"
+                                onChange={(event) =>
+                                  updateStat(index, field, event.target.value)
+                                }
+                                className="w-full rounded border border-border bg-muted/50 px-2 py-1 text-xs text-foreground"
                               />
                             </div>
                           ))}
@@ -420,40 +488,44 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
                     );
                   })}
                 </div>
-              )}
+              ) : null}
             </div>
 
             <button
               onClick={handleManualSave}
               disabled={isSaving}
-              className="w-full bg-amber-500 hover:bg-amber-400 text-black font-bold py-2.5 rounded-lg transition-colors disabled:opacity-50"
+              className="w-full rounded-lg bg-amber-500 py-2.5 font-bold text-black transition-colors hover:bg-amber-400 disabled:opacity-50"
             >
-              {isSaving ? 'Saving…' : '💾 Save Match Result'}
+              {isSaving ? 'Saving...' : 'Save Match Result'}
             </button>
           </div>
 
-          {/* ── Saved Results ── */}
-          {savedResults.length > 0 && (
+          {savedResults.length > 0 ? (
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Saved Results ({savedResults.length})
               </p>
               <div className="space-y-2">
-                {savedResults.map((r) => {
-                  const m = MATCHES.find((x) => x.id === r.matchId);
+                {savedResults.map((result) => {
+                  const match = MATCHES.find((candidate) => candidate.id === result.matchId);
                   return (
-                    <div key={r.matchId} className="flex items-center justify-between bg-muted/30 rounded-lg px-3 py-2 border border-border/50">
-                      <div>
+                    <div
+                      key={result.matchId}
+                      className="flex flex-col gap-3 rounded-lg border border-border/50 bg-muted/30 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground">
-                          Match #{r.matchId} {m ? `— ${m.team1} vs ${m.team2}` : ''}
+                          Match #{result.matchId}{' '}
+                          {match ? `- ${match.team1} vs ${match.team2}` : ''}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Source: {r.source} • {r.playerPerformances.length} players • Winner: {r.winner || 'N/A'}
+                          Source: {result.source} · {result.playerPerformances.length}{' '}
+                          players · Winner: {result.winner || 'N/A'}
                         </p>
                       </div>
                       <button
-                        onClick={() => deleteResult(r.matchId)}
-                        className="text-xs text-red-400 hover:text-red-300 border border-red-500/30 px-2 py-1 rounded-lg transition-colors"
+                        onClick={() => deleteResult(result.matchId)}
+                        className="rounded-lg border border-red-500/30 px-3 py-2 text-xs text-red-400 transition-colors hover:text-red-300"
                       >
                         Delete
                       </button>
@@ -462,9 +534,9 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
                 })}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -26,8 +26,8 @@ const ROLES: (PlayerRole | 'All')[] = [
 ];
 
 const SORT_OPTIONS = [
-  { value: 'price-desc', label: 'Price High→Low' },
-  { value: 'price-asc', label: 'Price Low→High' },
+  { value: 'price-desc', label: 'Price High to Low' },
+  { value: 'price-asc', label: 'Price Low to High' },
   { value: 'supply-asc', label: 'Supply Low' },
   { value: 'tier', label: 'Tier (Legend first)' },
 ];
@@ -38,20 +38,33 @@ export default function Market() {
   const [roleFilter, setRoleFilter] = useState<PlayerRole | 'All'>('All');
   const [sort, setSort] = useState('tier');
 
-  // Fetch real-time supply data from blockchain
   const { players: PLAYERS, isLoading } = useGetAllPlayersSupply();
 
   const filtered = useMemo(() => {
     let result = [...PLAYERS];
-    if (search)
-      result = result.filter((p) =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.symbol.toLowerCase().includes(search.toLowerCase()),
-      );
-    if (teamFilter !== 'ALL') result = result.filter((p) => p.team === teamFilter);
-    if (roleFilter !== 'All') result = result.filter((p) => p.role === roleFilter);
 
-    const tierOrder: Record<string, number> = { Legend: 0, Star: 1, Regular: 2 };
+    if (search) {
+      result = result.filter(
+        (player) =>
+          player.name.toLowerCase().includes(search.toLowerCase()) ||
+          player.symbol.toLowerCase().includes(search.toLowerCase()),
+      );
+    }
+
+    if (teamFilter !== 'ALL') {
+      result = result.filter((player) => player.team === teamFilter);
+    }
+
+    if (roleFilter !== 'All') {
+      result = result.filter((player) => player.role === roleFilter);
+    }
+
+    const tierOrder: Record<string, number> = {
+      Legend: 0,
+      Star: 1,
+      Regular: 2,
+    };
+
     switch (sort) {
       case 'price-desc':
         result.sort((a, b) => b.price - a.price);
@@ -68,16 +81,19 @@ export default function Market() {
         );
         break;
     }
-    return result;
-  }, [search, teamFilter, roleFilter, sort, PLAYERS]);
 
-  // Show loading state
+    return result;
+  }, [PLAYERS, roleFilter, search, sort, teamFilter]);
+
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-8">
+      <div className="container mx-auto max-w-7xl px-4 py-4 sm:py-6">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-80 animate-shimmer rounded-xl" />
+            <div
+              key={i}
+              className="h-[390px] animate-shimmer rounded-[1.75rem]"
+            />
           ))}
         </div>
       </div>
@@ -85,14 +101,12 @@ export default function Market() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      {/* Filters */}
-      <div className="sticky top-[57px] z-40 -mx-4 border-b border-border bg-background/90 px-4 py-4 backdrop-blur-xl">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[200px]">
+    <div className="container mx-auto max-w-7xl px-4 py-4 sm:py-6">
+      <div className="sticky top-[65px] z-40 -mx-4 border-b border-border bg-background/90 px-4 py-4 backdrop-blur-xl md:top-[57px]">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+          <div className="relative w-full lg:min-w-[240px] lg:flex-1">
             <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -105,77 +119,74 @@ export default function Market() {
               id="search-players"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or symbol…"
-              className="w-full rounded-lg border border-border bg-muted pl-10 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="Search by name or symbol..."
+              className="w-full rounded-lg border border-border bg-muted py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          {/* Role filter */}
-          <div className="flex flex-wrap gap-1.5">
-            {ROLES.map((r) => (
-              <button
-                key={r}
-                onClick={() => setRoleFilter(r)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  roleFilter === r
-                    ? 'bg-secondary/20 text-secondary border border-secondary'
-                    : 'bg-muted text-muted-foreground border border-transparent hover:border-border'
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center lg:flex-[1.2]">
+            <div className="flex flex-wrap gap-1.5">
+              {ROLES.map((role) => (
+                <button
+                  key={role}
+                  onClick={() => setRoleFilter(role)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    roleFilter === role
+                      ? 'border-secondary bg-secondary/20 text-secondary'
+                      : 'border-transparent bg-muted text-muted-foreground hover:border-border'
+                  }`}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
 
-          {/* Sort */}
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value)}
-            className="rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground focus:outline-none"
-          >
-            {SORT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-xs text-foreground focus:outline-none sm:w-auto"
+            >
+              {SORT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {/* Team filter — scrollable row */}
-        <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-          {TEAMS.map((t) => (
+        <div className="no-scrollbar mt-3 flex gap-1.5 overflow-x-auto pb-1">
+          {TEAMS.map((team) => (
             <button
-              key={t.code}
-              onClick={() => setTeamFilter(t.code)}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                teamFilter === t.code
-                  ? 'bg-primary/20 text-primary border border-primary'
-                  : 'bg-muted text-muted-foreground border border-transparent hover:border-border'
+              key={team.code}
+              onClick={() => setTeamFilter(team.code)}
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                teamFilter === team.code
+                  ? 'border-primary bg-primary/20 text-primary'
+                  : 'border-transparent bg-muted text-muted-foreground hover:border-border'
               }`}
             >
-              {t.label}
+              {team.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Count */}
       <p className="mt-4 text-xs text-muted-foreground">
         Showing {filtered.length} of {PLAYERS.length} players
       </p>
 
-      {/* Players Grid */}
       <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filtered.map((p, i) => (
-          <PlayerCard key={p.id} player={p} index={i} />
+        {filtered.map((player, index) => (
+          <PlayerCard key={player.id} player={player} index={index} />
         ))}
       </div>
 
       {filtered.length === 0 && (
-        <div className="flex min-h-[400px] items-center justify-center text-center">
+        <div className="flex min-h-[320px] items-center justify-center text-center sm:min-h-[400px]">
           <div>
             <p className="text-lg text-muted-foreground">No players found</p>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="mt-2 text-sm text-muted-foreground">
               Try adjusting your filters
             </p>
           </div>

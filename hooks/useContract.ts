@@ -311,6 +311,9 @@ export function useGetPrizePool() {
     matchPool: seasonData
       ? Number(formatEther((seasonData as unknown as bigint[])[0]))
       : 0,
+    totalFees: seasonData
+      ? Number(formatEther((seasonData as unknown as bigint[])[2]))
+      : 0,
     currentSeason: currentSeason ? Number(currentSeason) : 1,
   };
 }

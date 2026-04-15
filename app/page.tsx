@@ -23,7 +23,7 @@ export default function Home() {
   return (
     <div className="relative">
       {/* Hero */}
-      <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4">
+      <section className="relative flex min-h-[calc(100svh-4rem)] flex-col items-center justify-center overflow-hidden px-4 py-12 sm:py-16">
         <StarField />
         {/* Gradient orbs */}
         <div className="pointer-events-none absolute left-1/4 top-1/3 h-[400px] w-[400px] animate-float rounded-full bg-primary/20 blur-[120px]" />
@@ -36,14 +36,14 @@ export default function Home() {
         />
 
         <div
-          className="relative z-10 text-center animate-in fade-in slide-in-from-bottom-8 duration-800"
+          className="relative z-10 max-w-5xl text-center animate-in fade-in slide-in-from-bottom-8 duration-800"
           style={{ animationDelay: "0.2s" }}
         >
           <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-muted/50 px-4 py-1.5 text-sm text-muted-foreground backdrop-blur-sm">
             🏏 Entangled Hackathon 2026 — Powered by WireFluid
           </span>
 
-          <h1 className="mt-6 font-display text-5xl font-bold leading-tight text-foreground sm:text-6xl lg:text-[64px]">
+          <h1 className="mt-6 font-display text-4xl font-bold leading-tight text-foreground sm:text-6xl lg:text-[64px]">
             Own the Game.
             <br />
             Trade <span className="text-gold-gradient">PSL Stars.</span>
@@ -69,7 +69,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             <Link
               href="/market"
               className="bg-gold-gradient rounded-xl px-8 py-3 text-base font-semibold text-primary-foreground transition-transform hover:scale-105 shadow-lg"
@@ -87,7 +87,7 @@ export default function Home() {
 
         {/* Floating player cards */}
         <div
-          className="relative z-10 mt-16 grid w-full max-w-4xl grid-cols-1 gap-4 px-4 sm:grid-cols-3 animate-in fade-in slide-in-from-bottom-12 duration-1000"
+          className="relative z-10 mt-16 grid w-full max-w-4xl grid-cols-1 gap-4 px-4 animate-in fade-in slide-in-from-bottom-12 duration-1000 sm:grid-cols-2 lg:grid-cols-3"
           style={{ animationDelay: "0.5s" }}
         >
           {!loaded
@@ -104,7 +104,7 @@ export default function Home() {
           <h2 className="mb-12 text-center font-display text-3xl font-bold text-foreground sm:text-4xl">
             How It Works
           </h2>
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-3">
             {[
               {
                 icon: "🔍",
@@ -140,7 +140,7 @@ export default function Home() {
       {/* Stats Section */}
       <section className="py-16 px-4 border-t border-border">
         <div className="container mx-auto max-w-5xl">
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-3">
             {[
               { label: "Active Players", value: "40+" },
               { label: "Teams", value: "8" },

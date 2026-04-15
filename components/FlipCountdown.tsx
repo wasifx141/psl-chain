@@ -27,7 +27,7 @@ export default function FlipCountdown({ targetDate, className = "" }: FlipCountd
 
   const Digit = ({ value, label }: { value: number; label: string }) => (
     <div className="flex flex-col items-center">
-      <div className="relative flex h-14 w-14 items-center justify-center rounded-lg bg-muted font-display text-2xl font-bold text-foreground overflow-hidden sm:h-16 sm:w-16 sm:text-3xl">
+      <div className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-muted font-display text-xl font-bold text-foreground sm:h-16 sm:w-16 sm:text-3xl">
         <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
         {String(value).padStart(2, "0")}
       </div>
@@ -36,13 +36,10 @@ export default function FlipCountdown({ targetDate, className = "" }: FlipCountd
   );
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex flex-wrap items-center justify-center gap-3 ${className}`}>
       <Digit value={timeLeft.days} label="Days" />
-      <span className="text-xl font-bold text-muted-foreground pb-4">:</span>
       <Digit value={timeLeft.hours} label="Hrs" />
-      <span className="text-xl font-bold text-muted-foreground pb-4">:</span>
       <Digit value={timeLeft.minutes} label="Min" />
-      <span className="text-xl font-bold text-muted-foreground pb-4">:</span>
       <Digit value={timeLeft.seconds} label="Sec" />
     </div>
   );
