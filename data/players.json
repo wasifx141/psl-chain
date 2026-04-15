@@ -1,0 +1,49 @@
+[
+  {"id":0,"name":"Shadab Khan","symbol":"SHDB","team":"Islamabad United","role":"All-rounder","tier":0,"color":"#F3722C"},
+  {"id":1,"name":"Imad Wasim","symbol":"IMAD","team":"Islamabad United","role":"All-rounder","tier":0,"color":"#F3722C"},
+  {"id":2,"name":"Faheem Ashraf","symbol":"FAHM","team":"Islamabad United","role":"All-rounder","tier":1,"color":"#F3722C"},
+  {"id":3,"name":"Mark Chapman","symbol":"MCHP","team":"Islamabad United","role":"Batsman","tier":1,"color":"#F3722C"},
+  {"id":4,"name":"Devon Conway","symbol":"DCON","team":"Islamabad United","role":"Wicketkeeper","tier":1,"color":"#F3722C"},
+
+  {"id":5,"name":"Babar Azam","symbol":"BBAZ","team":"Peshawar Zalmi","role":"Batsman","tier":0,"color":"#F9C74F"},
+  {"id":6,"name":"Mohammad Haris","symbol":"MHRS","team":"Peshawar Zalmi","role":"Wicketkeeper","tier":1,"color":"#F9C74F"},
+  {"id":7,"name":"Sufyan Muqeem","symbol":"SFMQ","team":"Peshawar Zalmi","role":"Bowler","tier":1,"color":"#F9C74F"},
+  {"id":8,"name":"Aamer Jamal","symbol":"AJML","team":"Peshawar Zalmi","role":"All-rounder","tier":1,"color":"#F9C74F"},
+  {"id":9,"name":"Kusal Mendis","symbol":"KMDS","team":"Peshawar Zalmi","role":"Wicketkeeper","tier":1,"color":"#F9C74F"},
+
+  {"id":10,"name":"Saud Shakeel","symbol":"SSHK","team":"Quetta Gladiators","role":"Batsman","tier":0,"color":"#6A4C93"},
+  {"id":11,"name":"Rilee Rossouw","symbol":"RROS","team":"Quetta Gladiators","role":"Batsman","tier":0,"color":"#6A4C93"},
+  {"id":12,"name":"Abrar Ahmed","symbol":"ABRR","team":"Quetta Gladiators","role":"Bowler","tier":1,"color":"#6A4C93"},
+  {"id":13,"name":"Mohammad Wasim Jr","symbol":"MWJR","team":"Quetta Gladiators","role":"Bowler","tier":1,"color":"#6A4C93"},
+  {"id":14,"name":"Sarfaraz Ahmed","symbol":"SRFA","team":"Quetta Gladiators","role":"Wicketkeeper","tier":1,"color":"#6A4C93"},
+
+  {"id":15,"name":"Shaheen Afridi","symbol":"SHAF","team":"Lahore Qalandars","role":"Bowler","tier":0,"color":"#90BE6D"},
+  {"id":16,"name":"Fakhar Zaman","symbol":"FKHR","team":"Lahore Qalandars","role":"Batsman","tier":0,"color":"#90BE6D"},
+  {"id":17,"name":"Haris Rauf","symbol":"HRUF","team":"Lahore Qalandars","role":"Bowler","tier":1,"color":"#90BE6D"},
+  {"id":18,"name":"Sikandar Raza","symbol":"SKRA","team":"Lahore Qalandars","role":"All-rounder","tier":1,"color":"#90BE6D"},
+  {"id":19,"name":"Abdullah Shafique","symbol":"ABDS","team":"Lahore Qalandars","role":"Batsman","tier":1,"color":"#90BE6D"},
+
+  {"id":20,"name":"Steve Smith","symbol":"SMSH","team":"Sialkot Stallions","role":"Batsman","tier":0,"color":"#4D908E"},
+  {"id":21,"name":"Mohammad Nawaz","symbol":"NAWZ","team":"Sialkot Stallions","role":"All-rounder","tier":1,"color":"#4D908E"},
+  {"id":22,"name":"Ashton Turner","symbol":"ATUR","team":"Sialkot Stallions","role":"All-rounder","tier":1,"color":"#4D908E"},
+  {"id":23,"name":"Josh Philippe","symbol":"JPHL","team":"Sialkot Stallions","role":"Wicketkeeper","tier":1,"color":"#4D908E"},
+  {"id":24,"name":"Tabraiz Shamsi","symbol":"TSHM","team":"Sialkot Stallions","role":"Bowler","tier":1,"color":"#4D908E"},
+
+  {"id":25,"name":"David Warner","symbol":"WRNR","team":"Karachi Kings","role":"Batsman","tier":0,"color":"#277DA1"},
+  {"id":26,"name":"Moeen Ali","symbol":"MOAL","team":"Karachi Kings","role":"All-rounder","tier":0,"color":"#277DA1"},
+  {"id":27,"name":"Hasan Ali","symbol":"HSAN","team":"Karachi Kings","role":"Bowler","tier":1,"color":"#277DA1"},
+  {"id":28,"name":"Adam Zampa","symbol":"ZMPA","team":"Karachi Kings","role":"Bowler","tier":1,"color":"#277DA1"},
+  {"id":29,"name":"Shan Masood","symbol":"SMAS","team":"Karachi Kings","role":"Batsman","tier":1,"color":"#277DA1"},
+
+  {"id":30,"name":"Daryl Mitchell","symbol":"DMIT","team":"Rawalpindi Team","role":"All-rounder","tier":0,"color":"#577590"},
+  {"id":31,"name":"Mohammad Rizwan","symbol":"RIZW","team":"Rawalpindi Team","role":"Wicketkeeper","tier":0,"color":"#577590"},
+  {"id":32,"name":"Mohammad Amir","symbol":"AMIR","team":"Rawalpindi Team","role":"Bowler","tier":1,"color":"#577590"},
+  {"id":33,"name":"Sam Billings","symbol":"SBIL","team":"Rawalpindi Team","role":"Wicketkeeper","tier":1,"color":"#577590"},
+  {"id":34,"name":"Zaman Khan","symbol":"ZMAN","team":"Rawalpindi Team","role":"Bowler","tier":1,"color":"#577590"},
+
+  {"id":35,"name":"Saim Ayub","symbol":"SAYB","team":"Hyderabad Kingsmen","role":"Batsman","tier":0,"color":"#F94144"},
+  {"id":36,"name":"Marnus Labuschagne","symbol":"MLAB","team":"Hyderabad Kingsmen","role":"Batsman","tier":0,"color":"#F94144"},
+  {"id":37,"name":"Kusal Perera","symbol":"KPER","team":"Hyderabad Kingsmen","role":"Wicketkeeper","tier":1,"color":"#F94144"},
+  {"id":38,"name":"Irfan Khan Niazi","symbol":"IRFN","team":"Hyderabad Kingsmen","role":"All-rounder","tier":1,"color":"#F94144"},
+  {"id":39,"name":"Mohammad Ali","symbol":"MALI","team":"Hyderabad Kingsmen","role":"Bowler","tier":1,"color":"#F94144"}
+]
