@@ -1,8 +1,9 @@
+import { DataStatusIndicator } from "@/components/DataStatusIndicator";
+import Navbar from "@/components/Navbar";
+import { ToasterProvider } from "@/components/Toaster";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import { ToasterProvider } from "@/components/Toaster";
 import { Web3Provider } from "./providers";
 
 const geistSans = Geist({
@@ -42,6 +43,7 @@ export default function RootLayout({
           <Navbar />
           <main className="flex-1">{children}</main>
           <ToasterProvider />
+          <DataStatusIndicator />
         </Web3Provider>
       </body>
     </html>

@@ -153,6 +153,9 @@ export default function PlayerDetail() {
 
     fetchData();
 
+    // Set up polling interval to refresh data every 5 seconds
+    const pollInterval = setInterval(fetchData, 5000);
+
     // Subscribe to real-time updates
     const transactionsChannel = supabase
       .channel(`player-${player.numericId}-transactions`)
@@ -186,6 +189,7 @@ export default function PlayerDetail() {
       .subscribe();
 
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(transactionsChannel);
       supabase.removeChannel(portfolioChannel);
     };
@@ -322,6 +326,13 @@ export default function PlayerDetail() {
           </span>,
         );
       }
+      
+      // Force refetch data after successful transaction
+      // Wait a bit for the blockchain to update
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : 'Transaction failed. Try again.';

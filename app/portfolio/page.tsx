@@ -2,7 +2,7 @@
 
 import { getNextMatch, getTodayMatches } from '@/config/matches';
 import { PLAYERS, TEAM_COLORS, TeamCode } from '@/config/players';
-import { useDatabasePortfolio } from '@/hooks/useContract';
+import { useDatabasePortfolio, useGetPortfolio } from '@/hooks/useContract';
 import { formatNumber } from '@/utils/format';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
@@ -10,23 +10,39 @@ import { useAccount } from 'wagmi';
 export default function Portfolio() {
   const { address, isConnected } = useAccount();
   const { data: dbPortfolio, isLoading, refetch } = useDatabasePortfolio(address ?? '');
+  
+  // Fallback to on-chain data if Supabase is empty or stale
+  const { holdings: onChainHoldings, isLoading: onChainLoading } = useGetPortfolio(address ?? '');
 
   // Debug logging
   console.log('Portfolio Debug:', {
     address,
     isConnected,
     dbPortfolio,
+    onChainHoldings,
     isLoading,
+    onChainLoading,
   });
 
-  const mappedHoldings = (dbPortfolio?.holdings || []).map((h: any) => ({
-    player: PLAYERS.find(p => p.numericId === h.player_id),
-    amount: h.amount,
-    value_wc: h.value_wc
-  })).filter((h: any) => h.player && h.amount > 0);
+  // Use Supabase data if available, otherwise fall back to on-chain data
+  const useSupabaseData = dbPortfolio && dbPortfolio.holdings && dbPortfolio.holdings.length > 0;
+  
+  const mappedHoldings = useSupabaseData
+    ? (dbPortfolio?.holdings || []).map((h: any) => ({
+        player: PLAYERS.find(p => p.numericId === h.player_id),
+        amount: h.amount,
+        value_wc: h.value_wc
+      })).filter((h: any) => h.player && h.amount > 0)
+    : onChainHoldings.map((h: any) => ({
+        player: h.player,
+        amount: h.amount,
+        value_wc: h.player.price * h.amount // Estimate value using base price
+      }));
 
   const totalTokens = mappedHoldings.reduce((acc: number, h: any) => acc + h.amount, 0);
-  const estimatedValue = dbPortfolio?.total_value_wc || 0;
+  const estimatedValue = useSupabaseData 
+    ? (dbPortfolio?.total_value_wc || 0)
+    : mappedHoldings.reduce((acc: number, h: any) => acc + h.value_wc, 0);
 
   // Next Match / Today Match functionality
   const todayMatches = getTodayMatches();
@@ -53,7 +69,7 @@ export default function Portfolio() {
     );
   }
 
-  if (isLoading) {
+  if (isLoading || onChainLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 grid gap-4 sm:grid-cols-3">
@@ -74,6 +90,13 @@ export default function Portfolio() {
           <div>Wallet: {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Not connected'}</div>
           <div>Holdings: {mappedHoldings.length} players</div>
           <div>Total Value: {formatNumber(estimatedValue)} WC</div>
+          <div className="mt-1">
+            {useSupabaseData ? (
+              <span className="text-green-500">✓ Using cached data</span>
+            ) : (
+              <span className="text-yellow-500">⚠ Using on-chain data (cache empty)</span>
+            )}
+          </div>
         </div>
         <button
           onClick={() => refetch()}

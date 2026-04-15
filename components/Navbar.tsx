@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from "react";
+import { wirefluid } from "@/config/wagmi";
+import { truncateAddress } from "@/utils/format";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useEffect, useRef, useState } from "react";
+import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
 import { injected } from 'wagmi/connectors';
-import { truncateAddress } from "@/utils/format";
-import { wirefluid } from "@/config/wagmi";
-import { useSwitchChain } from 'wagmi';
 
 const NAV_ITEMS = [
   { path: "/", label: "Home" },
@@ -22,16 +21,22 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { address, isConnected, chain } = useAccount();
-  const { connect } = useConnect({
-    mutation: {
-      onSuccess: () => {
-        router.push('/market');
-      }
-    }
-  });
+  const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
   const [mobileOpen, setMobileOpen] = useState(false);
+  
+  // Track previous connection state to detect new connections
+  const prevConnected = useRef(isConnected);
+  
+  // Redirect to market when wallet connects
+  useEffect(() => {
+    // Only redirect if user just connected (wasn't connected before, but is now)
+    if (isConnected && !prevConnected.current) {
+      router.push('/market');
+    }
+    prevConnected.current = isConnected;
+  }, [isConnected, router]);
   
   // Check if user is on wrong network
   const isWrongNetwork = isConnected && chain?.id !== wirefluid.id;
