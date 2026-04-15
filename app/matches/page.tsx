@@ -115,9 +115,7 @@ export default function MatchCenter() {
     return TEAM_COLORS[teamCode as keyof typeof TEAM_COLORS] || { from: "hsl(0 0% 50%)", to: "hsl(0 0% 30%)" };
   };
 
-  const handleViewMatch = () => {
-    toast.info("Match details coming soon!");
-  };
+
 
   const formatMatchDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -237,12 +235,6 @@ export default function MatchCenter() {
                 >
                   Stake Your Players
                 </button>
-                <button
-                  onClick={handleViewMatch}
-                  className="bg-muted hover:bg-muted/80 rounded-lg px-6 py-3 font-semibold text-foreground transition-all"
-                >
-                  View Match Details
-                </button>
               </div>
             </div>
           )}
@@ -279,24 +271,35 @@ export default function MatchCenter() {
             {/* My Tokens for Next Match */}
             {myTokensForNextMatch.length > 0 && (
               <div className="mt-6 p-4 bg-muted/30 rounded-lg">
-                <h3 className="text-sm font-semibold text-foreground mb-3">My Tokens in This Match</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">Your Participating Players</h3>
                 <div className="flex flex-wrap gap-2 justify-center">
-                  {myTokensForNextMatch.map((item: any) => (
-                    <div key={item.player.id} className="flex items-center gap-2 px-3 py-2 bg-background/50 rounded-lg border border-border/50">
-                      <span className="text-sm font-medium">{item.player.name}</span>
-                      <span className="text-xs text-muted-foreground">×{item.tokens}</span>
-                    </div>
-                  ))}
+                  {myTokensForNextMatch.map((item: any) => {
+                    const colors = getTeamColors(item.player.team);
+                    return (
+                      <div 
+                        key={item.player.id} 
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border/50"
+                        style={{
+                          background: `linear-gradient(135deg, ${colors.from}15, ${colors.to}15)`,
+                        }}
+                      >
+                        <div
+                          className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold"
+                          style={{
+                            background: `linear-gradient(135deg, ${colors.from}, ${colors.to})`,
+                            color: "white",
+                          }}
+                        >
+                          {item.player.initials}
+                        </div>
+                        <span className="text-sm font-medium text-foreground">{item.player.name}</span>
+                        <span className="text-xs font-semibold text-primary">×{item.tokens}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
-
-            <button
-              onClick={handleViewMatch}
-              className="mt-6 bg-gold-gradient rounded-lg px-8 py-3 font-semibold text-primary-foreground transition-transform hover:scale-105"
-            >
-              View Match Details
-            </button>
           </div>
 
           {/* Upcoming Matches */}

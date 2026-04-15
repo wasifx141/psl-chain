@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
 import { wirefluid } from "@/config/wagmi";
 import { truncateAddress } from "@/utils/format";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
-import { injected } from 'wagmi/connectors';
+import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
+import { injected } from "wagmi/connectors";
 
 const NAV_ITEMS = [
   { path: "/", label: "Home" },
@@ -25,19 +25,20 @@ export default function Navbar() {
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
   const [mobileOpen, setMobileOpen] = useState(false);
-  
+
   // Track previous connection state to detect new connections
   const prevConnected = useRef(isConnected);
-  
-  // Redirect to market when wallet connects
+
+  // Redirect to market when wallet connects or if already connected on the landing page
   useEffect(() => {
     // Only redirect if user just connected (wasn't connected before, but is now)
-    if (isConnected && !prevConnected.current) {
-      router.push('/market');
+    // or if they load the landing page while already connected
+    if (isConnected && !prevConnected.current && pathname === "/") {
+      router.push("/market");
     }
     prevConnected.current = isConnected;
-  }, [isConnected, router]);
-  
+  }, [isConnected, pathname, router]);
+
   // Check if user is on wrong network
   const isWrongNetwork = isConnected && chain?.id !== wirefluid.id;
 
@@ -77,7 +78,7 @@ export default function Navbar() {
               ) : (
                 <>
                   <span className="hidden text-sm text-muted-foreground sm:block">
-                    {truncateAddress(address || '')}
+                    {truncateAddress(address || "")}
                   </span>
                   <button
                     onClick={() => disconnect()}
@@ -90,7 +91,9 @@ export default function Navbar() {
             </div>
           ) : (
             <button
-              onClick={() => connect({ connector: injected(), chainId: wirefluid.id })}
+              onClick={() =>
+                connect({ connector: injected(), chainId: wirefluid.id })
+              }
               className="bg-gold-gradient rounded-lg px-4 py-2 text-sm font-semibold text-primary-foreground transition-transform hover:scale-105"
             >
               Connect Wallet
@@ -100,7 +103,13 @@ export default function Navbar() {
             onClick={() => setMobileOpen(!mobileOpen)}
             className="md:hidden text-foreground p-1"
           >
-            <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="24"
+              height="24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               {mobileOpen ? (
                 <path d="M6 6l12 12M6 18L18 6" />
               ) : (
@@ -119,7 +128,9 @@ export default function Navbar() {
               href={item.path}
               onClick={() => setMobileOpen(false)}
               className={`block px-4 py-3 text-sm ${
-                pathname === item.path ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                pathname === item.path
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground"
               }`}
             >
               {item.label}

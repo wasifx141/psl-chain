@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { ERC20_ABI, MARKET_ABI, STAKING_ABI } from '@/config/abis';
-import { CHAIN_CONFIG, CONTRACTS } from '@/config/contracts';
-import { PLAYERS } from '@/config/players';
-import { wagmiConfig } from '@/config/wagmi';
-import { FEES } from '@/lib/constants';
-import type { TradeResult } from '@/lib/types';
-import { useQuery } from '@tanstack/react-query';
-import { formatEther, parseEther } from 'viem';
-import { useReadContract, useReadContracts, useWriteContract } from 'wagmi';
-import { waitForTransactionReceipt } from 'wagmi/actions';
+import { ERC20_ABI, MARKET_ABI, STAKING_ABI } from "@/config/abis";
+import { CHAIN_CONFIG, CONTRACTS } from "@/config/contracts";
+import { PLAYERS } from "@/config/players";
+import { wagmiConfig } from "@/config/wagmi";
+import { FEES } from "@/lib/constants";
+import type { TradeResult } from "@/lib/types";
+import { useQuery } from "@tanstack/react-query";
+import { formatEther, parseEther } from "viem";
+import { useReadContract, useReadContracts, useWriteContract } from "wagmi";
+import { waitForTransactionReceipt } from "wagmi/actions";
 
 // ─── BUY ──────────────────────────────────────────────────────────────────────
 export function useBuyTokens() {
@@ -21,7 +21,7 @@ export function useBuyTokens() {
     buyPrice: bigint,
   ): Promise<TradeResult> => {
     if (!tokenAddress || amount <= 0) {
-      throw new Error('Invalid token address or amount');
+      throw new Error("Invalid token address or amount");
     }
 
     // Add slippage buffer so the contract's excess-refund handles the rest
@@ -31,7 +31,7 @@ export function useBuyTokens() {
     const hash = await writeContractAsync({
       address: CONTRACTS.MARKET,
       abi: MARKET_ABI,
-      functionName: 'buyTokens',
+      functionName: "buyTokens",
       args: [tokenAddress as `0x${string}`, BigInt(amount)],
       value: valueWithSlippage,
     });
@@ -54,14 +54,14 @@ export function useSellTokens() {
     amount: number,
   ): Promise<TradeResult> => {
     if (!tokenAddress || amount <= 0) {
-      throw new Error('Invalid token address or amount');
+      throw new Error("Invalid token address or amount");
     }
 
     // Step 1: Approve market to spend player tokens
     const approveHash = await writeContractAsync({
       address: tokenAddress as `0x${string}`,
       abi: ERC20_ABI,
-      functionName: 'approve',
+      functionName: "approve",
       args: [CONTRACTS.MARKET, parseEther(String(amount))],
     });
 
@@ -72,7 +72,7 @@ export function useSellTokens() {
     const hash = await writeContractAsync({
       address: CONTRACTS.MARKET,
       abi: MARKET_ABI,
-      functionName: 'sellTokens',
+      functionName: "sellTokens",
       args: [tokenAddress as `0x${string}`, BigInt(amount)],
     });
 
@@ -96,14 +96,14 @@ export function useStakeTokens() {
     matchId = 1,
   ): Promise<TradeResult> => {
     if (!tokenAddress || amount <= 0 || playerId < 0) {
-      throw new Error('Invalid staking parameters');
+      throw new Error("Invalid staking parameters");
     }
 
     // Step 1: Approve staking contract to pull tokens
     const approveHash = await writeContractAsync({
       address: tokenAddress as `0x${string}`,
       abi: ERC20_ABI,
-      functionName: 'approve',
+      functionName: "approve",
       args: [CONTRACTS.STAKING, parseEther(String(amount))],
     });
 
@@ -113,11 +113,11 @@ export function useStakeTokens() {
     const hash = await writeContractAsync({
       address: CONTRACTS.STAKING,
       abi: STAKING_ABI,
-      functionName: 'stakeForMatch',
+      functionName: "stakeForMatch",
       args: [
         tokenAddress as `0x${string}`,
-        playerId as unknown as number & { __brand: 'uint8' },
-        matchId as unknown as number & { __brand: 'uint8' },
+        playerId as unknown as number & { __brand: "uint8" },
+        matchId as unknown as number & { __brand: "uint8" },
         BigInt(amount),
       ],
     });
@@ -136,7 +136,7 @@ export function useGetBuyPrice(tokenAddress: string, amount: number) {
   return useReadContract({
     address: CONTRACTS.MARKET,
     abi: MARKET_ABI,
-    functionName: 'getBuyPrice',
+    functionName: "getBuyPrice",
     args: [tokenAddress as `0x${string}`, BigInt(amount)],
     query: { enabled: !!tokenAddress && amount > 0 },
   });
@@ -147,7 +147,7 @@ export function useGetSellPrice(tokenAddress: string, amount: number) {
   return useReadContract({
     address: CONTRACTS.MARKET,
     abi: MARKET_ABI,
-    functionName: 'getSellPrice',
+    functionName: "getSellPrice",
     args: [tokenAddress as `0x${string}`, BigInt(amount)],
     query: { enabled: !!tokenAddress && amount > 0 },
   });
@@ -158,7 +158,7 @@ export function useGetTokensRemaining(tokenAddress: string) {
   return useReadContract({
     address: CONTRACTS.MARKET,
     abi: MARKET_ABI,
-    functionName: 'getTokensRemaining',
+    functionName: "getTokensRemaining",
     args: [tokenAddress as `0x${string}`],
     query: { enabled: !!tokenAddress },
   });
@@ -169,7 +169,7 @@ export function useGetHoldings(wallet: string, tokenAddress: string) {
   return useReadContract({
     address: CONTRACTS.MARKET,
     abi: MARKET_ABI,
-    functionName: 'getHoldings',
+    functionName: "getHoldings",
     args: [wallet as `0x${string}`, tokenAddress as `0x${string}`],
     query: { enabled: !!wallet && !!tokenAddress },
   });
@@ -180,7 +180,7 @@ export function useGetPortfolio(wallet: string) {
   const contracts = PLAYERS.map((p) => ({
     address: CONTRACTS.MARKET as `0x${string}`,
     abi: MARKET_ABI,
-    functionName: 'getHoldings' as const,
+    functionName: "getHoldings" as const,
     args: [wallet as `0x${string}`, p.tokenAddress as `0x${string}`],
   }));
 
@@ -204,15 +204,22 @@ export function useGetPortfolio(wallet: string) {
 
 // ─── READ: All players' remaining tokens (for market page) ───────────────────
 export function useGetAllPlayersSupply() {
-  const contracts = PLAYERS.map((p) => ({
+  const supplyContracts = PLAYERS.map((p) => ({
     address: CONTRACTS.MARKET as `0x${string}`,
     abi: MARKET_ABI,
-    functionName: 'getTokensRemaining' as const,
+    functionName: "getTokensRemaining" as const,
     args: [p.tokenAddress as `0x${string}`],
   }));
 
+  const priceContracts = PLAYERS.map((p) => ({
+    address: CONTRACTS.MARKET as `0x${string}`,
+    abi: MARKET_ABI,
+    functionName: "getBuyPrice" as const,
+    args: [p.tokenAddress as `0x${string}`, 1n],
+  }));
+
   const result = useReadContracts({
-    contracts,
+    contracts: [...supplyContracts, ...priceContracts],
     query: {
       refetchInterval: 3000, // Refetch every 3 seconds
       staleTime: 0,
@@ -221,15 +228,27 @@ export function useGetAllPlayersSupply() {
 
   // Map results back to player data with remaining supply
   const playersWithSupply = result.data
-    ? PLAYERS.map((p, i) => ({
-        ...p,
-        supply: result.data?.[i]?.result
-          ? Number(result.data[i].result as bigint)
-          : p.supply,
-      }))
+    ? PLAYERS.map((p, i) => {
+        const supplyResult = result.data[i]?.result;
+        const priceResult = result.data[i + PLAYERS.length]?.result;
+        return {
+          ...p,
+          supply:
+            supplyResult !== undefined
+              ? Number(supplyResult as bigint)
+              : p.supply,
+          price:
+            priceResult !== undefined
+              ? Number(formatEther(priceResult as bigint))
+              : p.price,
+        };
+      })
     : PLAYERS;
-
-  return { players: playersWithSupply, isLoading: result.isLoading, isError: result.isError };
+  return {
+    players: playersWithSupply,
+    isLoading: result.isLoading,
+    isError: result.isError,
+  };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -243,55 +262,63 @@ export { formatEther };
 export function useGetPrizePool() {
   const { data: currentSeason } = useReadContract({
     address: CONTRACTS.PRIZE_POOL,
-    abi: [{
-      "inputs": [],
-      "name": "currentSeason",
-      "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
-      "stateMutability": "view",
-      "type": "function"
-    }],
-    functionName: 'currentSeason',
-  })
+    abi: [
+      {
+        inputs: [],
+        name: "currentSeason",
+        outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
+        stateMutability: "view",
+        type: "function",
+      },
+    ],
+    functionName: "currentSeason",
+  });
 
   const { data: seasonData } = useReadContract({
     address: CONTRACTS.PRIZE_POOL,
-    abi: [{
-      "inputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
-      "name": "seasons",
-      "outputs": [
-        {"internalType": "uint256", "name": "matchPool", "type": "uint256"},
-        {"internalType": "uint256", "name": "seasonPool", "type": "uint256"},
-        {"internalType": "uint256", "name": "platformFee", "type": "uint256"},
-        {"internalType": "uint256", "name": "totalFees", "type": "uint256"},
-        {"internalType": "bool", "name": "seasonDistributed", "type": "bool"}
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    }],
-    functionName: 'seasons',
+    abi: [
+      {
+        inputs: [{ internalType: "uint8", name: "", type: "uint8" }],
+        name: "seasons",
+        outputs: [
+          { internalType: "uint256", name: "matchPool", type: "uint256" },
+          { internalType: "uint256", name: "seasonPool", type: "uint256" },
+          { internalType: "uint256", name: "platformFee", type: "uint256" },
+          { internalType: "uint256", name: "totalFees", type: "uint256" },
+          { internalType: "bool", name: "seasonDistributed", type: "bool" },
+        ],
+        stateMutability: "view",
+        type: "function",
+      },
+    ],
+    functionName: "seasons",
     args: currentSeason ? [currentSeason as number] : undefined,
     query: {
       enabled: !!currentSeason,
-    }
-  })
+    },
+  });
 
   return {
-    matchPool: seasonData ? Number(formatEther((seasonData as any)[0] as bigint)) : 0,
-    seasonPool: seasonData ? Number(formatEther((seasonData as any)[1] as bigint)) : 0,
-    currentSeason: currentSeason ? Number(currentSeason) : 1
-  }
+    matchPool: seasonData
+      ? Number(formatEther((seasonData as any)[0] as bigint))
+      : 0,
+    seasonPool: seasonData
+      ? Number(formatEther((seasonData as any)[1] as bigint))
+      : 0,
+    currentSeason: currentSeason ? Number(currentSeason) : 1,
+  };
 }
 
 // ─── SUPABASE ─────────────────────────────────────────────────────────────────
-import { LIMITS } from '@/lib/constants';
-import { SupabaseService } from '@/lib/services/supabase.service';
+import { LIMITS } from "@/lib/constants";
+import { SupabaseService } from "@/lib/services/supabase.service";
 
 export function useLeaderboard() {
   return useQuery({
-    queryKey: ['leaderboard'],
+    queryKey: ["leaderboard"],
     queryFn: () => SupabaseService.getLeaderboard(LIMITS.LEADERBOARD_TOP_N),
     staleTime: 0, // Always consider data stale
-    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnMount: "always", // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchInterval: 3000, // Refetch every 3 seconds
     retry: 2,
@@ -300,11 +327,11 @@ export function useLeaderboard() {
 
 export function useDatabasePortfolio(wallet: string) {
   return useQuery({
-    queryKey: ['portfolioDb', wallet],
+    queryKey: ["portfolioDb", wallet],
     queryFn: () => SupabaseService.getPortfolio(wallet),
     enabled: !!wallet,
     staleTime: 0, // Always consider data stale
-    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnMount: "always", // Always refetch when component mounts
     refetchOnWindowFocus: true, // Refetch when window regains focus
     refetchInterval: 3000, // Refetch every 3 seconds
     retry: 2,
