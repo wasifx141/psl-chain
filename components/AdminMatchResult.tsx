@@ -51,6 +51,7 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
   const [cricApiMatchId, setCricApiMatchId] = useState('');
   const [stats, setStats] = useState<ManualPlayerStat[]>([]);
   const [addPlayerId, setAddPlayerId] = useState('');
+  const [playerSearch, setPlayerSearch] = useState('');
   const [open, setOpen] = useState(false);
 
   if (!isAdmin) return null;
@@ -60,6 +61,12 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
     (p) =>
       selectedMatch &&
       (p.team === selectedMatch.team1 || p.team === selectedMatch.team2),
+  );
+
+  const filteredMatchPlayers = matchPlayers.filter(
+    (p) =>
+      p.name.toLowerCase().includes(playerSearch.toLowerCase()) ||
+      p.team.toLowerCase().includes(playerSearch.toLowerCase())
   );
 
   function addPlayer() {
@@ -349,25 +356,34 @@ export default function AdminMatchResult({ connectedWallet }: Props) {
               </div>
 
               {/* Add single player */}
-              <div className="flex gap-2 mb-3">
-                <select
-                  value={addPlayerId}
-                  onChange={(e) => setAddPlayerId(e.target.value)}
-                  className="flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground"
-                >
-                  <option value="">Pick a player…</option>
-                  {PLAYERS.map((p) => (
-                    <option key={p.id} value={p.id} disabled={!!stats.find((s) => s.playerId === p.id)}>
-                      {p.name} ({p.team})
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={addPlayer}
-                  className="bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-                >
-                  + Add
-                </button>
+              <div className="flex flex-col gap-2 mb-3">
+                <input
+                  type="text"
+                  placeholder="Search match players..."
+                  value={playerSearch}
+                  onChange={(e) => setPlayerSearch(e.target.value)}
+                  className="w-full bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <div className="flex gap-2">
+                  <select
+                    value={addPlayerId}
+                    onChange={(e) => setAddPlayerId(e.target.value)}
+                    className="flex-1 bg-muted/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground"
+                  >
+                    <option value="">Pick a player…</option>
+                    {filteredMatchPlayers.map((p) => (
+                      <option key={p.id} value={p.id} disabled={!!stats.find((s) => s.playerId === p.id)}>
+                        {p.name} ({p.team})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={addPlayer}
+                    className="bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary text-sm font-semibold px-4 py-2 rounded-lg transition-colors shrink-0"
+                  >
+                    + Add
+                  </button>
+                </div>
               </div>
 
               {/* Stat rows */}

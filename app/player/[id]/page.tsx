@@ -13,6 +13,8 @@ import {
   useSellTokens,
   useStakeTokens,
 } from "@/hooks/useContract";
+import { PrizePoolStorage } from "@/lib/services/prizePool.storage";
+import { SupabaseService } from "@/lib/services/supabase.service";
 import { formatNumber } from "@/utils/format";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -457,9 +459,25 @@ export default function PlayerDetail() {
           amount,
           buyPrice as bigint,
         );
+        // Add 2% of trade value to daily prize pool
+        const buyValueWC = parseFloat(formatEther(buyPrice as bigint));
+        const poolContribution = buyValueWC * 0.02;
+        PrizePoolStorage.addToPool(poolContribution);
+
+        // ── Sync portfolio + leaderboard to Supabase ──────────────────
+        if (address) {
+          const newAmount = myHoldings + amount;
+          const newValueWC = newAmount * currentPrice;
+          await SupabaseService.upsertPortfolioHolding(address, {
+            player_id: player.numericId,
+            amount: newAmount,
+            value_wc: newValueWC,
+          });
+        }
+
         toast.success(
           <span>
-            Bought {amount} {player.symbol}!{" "}
+            Bought {amount} {player.symbol}! (+{poolContribution.toFixed(4)} WC → Prize Pool){" "}
             <a
               href={getExplorerUrl(result.txHash)}
               target="_blank"
@@ -473,9 +491,25 @@ export default function PlayerDetail() {
       } else if (tab === "SELL") {
         if (myHoldings < amount) throw new Error("Insufficient holdings");
         result = await sellTokens(player.tokenAddress, amount);
+        // Add 2% of sell value to daily prize pool
+        const sellValueWC = displaySellPrice;
+        const poolContributionSell = sellValueWC * 0.02;
+        PrizePoolStorage.addToPool(poolContributionSell);
+
+        // ── Sync portfolio + leaderboard to Supabase ──────────────────
+        if (address) {
+          const newAmount = Math.max(0, myHoldings - amount);
+          const newValueWC = newAmount * currentPrice;
+          await SupabaseService.upsertPortfolioHolding(address, {
+            player_id: player.numericId,
+            amount: newAmount,
+            value_wc: newValueWC,
+          });
+        }
+
         toast.success(
           <span>
-            Sold {amount} {player.symbol}!{" "}
+            Sold {amount} {player.symbol}! (+{poolContributionSell.toFixed(4)} WC → Prize Pool){" "}
             <a
               href={getExplorerUrl(result.txHash)}
               target="_blank"
