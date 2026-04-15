@@ -1,7 +1,7 @@
 'use client';
 
 import FlipCountdown from "@/components/FlipCountdown";
-import { MATCHES, getNextMatch } from "@/config/matches";
+import { MATCHES, getNextMatch, getTodayMatches } from "@/config/matches";
 import { PLAYERS, TEAM_COLORS } from "@/config/players";
 import { useStore } from "@/store/useStore";
 import { useEffect, useState } from "react";
@@ -10,6 +10,8 @@ import { toast } from "sonner";
 export default function MatchCenter() {
   const [loaded, setLoaded] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [nextMatch, setNextMatch] = useState<ReturnType<typeof getNextMatch> | null>(null);
+  const [todayMatches, setTodayMatches] = useState<ReturnType<typeof getTodayMatches>>([]);
   const { holdings } = useStore();
 
   useEffect(() => {
@@ -22,6 +24,10 @@ export default function MatchCenter() {
     // Set initial time on client
     setCurrentTime(Date.now());
     
+    // Get matches on client side only
+    setNextMatch(getNextMatch());
+    setTodayMatches(getTodayMatches());
+    
     // Update current time every second for real-time countdown
     const interval = setInterval(() => {
       setCurrentTime(Date.now());
@@ -29,7 +35,6 @@ export default function MatchCenter() {
     return () => clearInterval(interval);
   }, []);
 
-  const nextMatch = getNextMatch();
   
   // Get all upcoming matches from April 15 onwards (only after currentTime is set)
   const upcomingMatches = currentTime > 0 ? MATCHES.filter(m => {
@@ -43,7 +48,7 @@ export default function MatchCenter() {
     .sort((a, b) => b.timestamp - a.timestamp)
     .slice(0, 5) : [];
 
-  // Get player tokens for next match teams
+  // Get player tokens for a specific match
   const getPlayerTokensForMatch = (match: typeof nextMatch) => {
     if (!match || !match.team1 || !match.team2) return [];
     
@@ -59,7 +64,28 @@ export default function MatchCenter() {
       .filter(Boolean);
   };
 
+  // Get all player tokens for today's matches
+  const getPlayerTokensForTodayMatches = () => {
+    if (todayMatches.length === 0) return [];
+    
+    const todayTeams = new Set<string>();
+    todayMatches.forEach(match => {
+      if (match.team1) todayTeams.add(match.team1);
+      if (match.team2) todayTeams.add(match.team2);
+    });
+    
+    const todayPlayers = PLAYERS.filter(p => todayTeams.has(p.team));
+    
+    return todayPlayers
+      .map(player => {
+        const holding = holdings.find(h => h.playerId === player.id);
+        return holding ? { player, tokens: holding.tokens } : null;
+      })
+      .filter(Boolean);
+  };
+
   const myTokensForNextMatch = nextMatch ? getPlayerTokensForMatch(nextMatch) : [];
+  const myTokensPlayingToday = getPlayerTokensForTodayMatches();
 
   // Create a stable fallback date for SSR
   const fallbackDate = new Date('2026-04-16T00:00:00Z');
@@ -105,6 +131,114 @@ export default function MatchCenter() {
         </div>
       ) : (
         <div className="animate-in fade-in duration-700 space-y-8">
+          {/* Today's Matches - Your Players in Action */}
+          {todayMatches.length > 0 && myTokensPlayingToday.length > 0 && (
+            <div className="card-surface rounded-xl p-6 border-2 border-primary/50 bg-gradient-to-br from-primary/5 to-primary/10">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl">⚡</span>
+                <div>
+                  <h2 className="font-display text-2xl font-bold text-foreground">
+                    Your Players Performing Today!
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {myTokensPlayingToday.length} of your players are in action today
+                  </p>
+                </div>
+              </div>
+
+              {/* Today's Matches */}
+              <div className="space-y-4 mb-6">
+                {todayMatches.map((match) => (
+                  <div key={match.id} className="bg-background/50 rounded-lg p-4 border border-border/50">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-4">
+                        <div
+                          className="flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold"
+                          style={{
+                            background: `linear-gradient(135deg, ${getTeamColors(match.team1 || "").from}, ${getTeamColors(match.team1 || "").to})`,
+                            color: "white",
+                          }}
+                        >
+                          {match.team1}
+                        </div>
+                        <span className="text-xl font-bold text-primary font-display">VS</span>
+                        <div
+                          className="flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold"
+                          style={{
+                            background: `linear-gradient(135deg, ${getTeamColors(match.team2 || "").from}, ${getTeamColors(match.team2 || "").to})`,
+                            color: "white",
+                          }}
+                        >
+                          {match.team2}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-foreground">{match.venue}</p>
+                        <p className="text-xs text-muted-foreground">{formatMatchTime(match.timestamp)}</p>
+                      </div>
+                    </div>
+
+                    {/* Show user's players for this specific match */}
+                    {(() => {
+                      const matchPlayerTokens = myTokensPlayingToday.filter((item: any) => 
+                        item.player.team === match.team1 || item.player.team === match.team2
+                      );
+                      
+                      if (matchPlayerTokens.length === 0) return null;
+                      
+                      return (
+                        <div className="mt-3 pt-3 border-t border-border/30">
+                          <p className="text-xs font-semibold text-muted-foreground mb-2">Your Players:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {matchPlayerTokens.map((item: any) => {
+                              const colors = getTeamColors(item.player.team);
+                              return (
+                                <div 
+                                  key={item.player.id} 
+                                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border/50"
+                                  style={{
+                                    background: `linear-gradient(135deg, ${colors.from}15, ${colors.to}15)`,
+                                  }}
+                                >
+                                  <div
+                                    className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold"
+                                    style={{
+                                      background: `linear-gradient(135deg, ${colors.from}, ${colors.to})`,
+                                      color: "white",
+                                    }}
+                                  >
+                                    {item.player.initials}
+                                  </div>
+                                  <span className="text-sm font-medium text-foreground">{item.player.name}</span>
+                                  <span className="text-xs font-semibold text-primary">×{item.tokens}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={() => toast.info("Staking feature coming soon!")}
+                  className="bg-gold-gradient rounded-lg px-6 py-3 font-semibold text-primary-foreground transition-transform hover:scale-105"
+                >
+                  Stake Your Players
+                </button>
+                <button
+                  onClick={handleViewMatch}
+                  className="bg-muted hover:bg-muted/80 rounded-lg px-6 py-3 font-semibold text-foreground transition-all"
+                >
+                  View Match Details
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Next Match */}
           <div className="card-surface rounded-xl p-8 text-center">
             <div className="flex items-center justify-center gap-6 mb-4">

@@ -1,5 +1,50 @@
-import deployments from "@/deployments.json";
 import { MARKET_ABI, STAKING_ABI } from "@/config/abis";
+
+// ─── Load deployments from environment variables or file ─────────────────────
+
+interface Deployments {
+  prizePool: string;
+  stakingContract: string;
+  oracle: string;
+  championNFT: string;
+  marketContract: string;
+  playerTokenFactory: string;
+  playerTokens: Record<string, string>;
+}
+
+function loadDeployments(): Deployments {
+  // Try environment variables first (for Vercel/production)
+  if (process.env.NEXT_PUBLIC_PRIZE_POOL_ADDRESS) {
+    return {
+      prizePool: process.env.NEXT_PUBLIC_PRIZE_POOL_ADDRESS,
+      stakingContract: process.env.NEXT_PUBLIC_STAKING_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000",
+      oracle: process.env.NEXT_PUBLIC_ORACLE_ADDRESS || "0x0000000000000000000000000000000000000000",
+      championNFT: process.env.NEXT_PUBLIC_CHAMPION_NFT_ADDRESS || "0x0000000000000000000000000000000000000000",
+      marketContract: process.env.NEXT_PUBLIC_MARKET_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000",
+      playerTokenFactory: process.env.NEXT_PUBLIC_PLAYER_TOKEN_FACTORY_ADDRESS || "0x0000000000000000000000000000000000000000",
+      playerTokens: JSON.parse(process.env.NEXT_PUBLIC_PLAYER_TOKENS || "{}"),
+    };
+  }
+
+  // Try to load from deployments.json (for local development)
+  try {
+    const deploymentsFile = require("@/deployments.json");
+    return deploymentsFile;
+  } catch (e) {
+    console.warn("⚠️ No deployments.json found and no environment variables set. Using placeholder addresses.");
+    return {
+      prizePool: "0x0000000000000000000000000000000000000000",
+      stakingContract: "0x0000000000000000000000000000000000000000",
+      oracle: "0x0000000000000000000000000000000000000000",
+      championNFT: "0x0000000000000000000000000000000000000000",
+      marketContract: "0x0000000000000000000000000000000000000000",
+      playerTokenFactory: "0x0000000000000000000000000000000000000000",
+      playerTokens: {},
+    };
+  }
+}
+
+const deployments = loadDeployments();
 
 // ─── Additional ABIs needed by src/hooks and API routes ──────────────────────
 

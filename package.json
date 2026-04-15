@@ -15,7 +15,9 @@
     "mock-match": "npx hardhat run scripts/mockMatch.ts --network wirefluid",
     "verify-setup": "npx hardhat run scripts/verifySetup.ts --network wirefluid",
     "listener": "npx ts-node scripts/supabaseListener.js",
-    "sync-portfolio": "node scripts/syncPortfolio.js"
+    "sync-portfolio": "node scripts/syncPortfolio.js",
+    "check-listener": "node scripts/checkListener.js",
+    "generate-env": "node scripts/generateEnvFromDeployments.js"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.6.1",

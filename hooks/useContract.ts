@@ -36,6 +36,9 @@ export function useBuyTokens() {
       value: valueWithSlippage,
     });
 
+    // Wait for transaction to be mined
+    await waitForTransactionReceipt(wagmiConfig, { hash });
+
     return { txHash: hash };
   };
 
@@ -72,6 +75,9 @@ export function useSellTokens() {
       functionName: 'sellTokens',
       args: [tokenAddress as `0x${string}`, BigInt(amount)],
     });
+
+    // Wait for transaction to be mined
+    await waitForTransactionReceipt(wagmiConfig, { hash });
 
     return { txHash: hash };
   };
@@ -115,6 +121,9 @@ export function useStakeTokens() {
         BigInt(amount),
       ],
     });
+
+    // Wait for transaction to be mined
+    await waitForTransactionReceipt(wagmiConfig, { hash });
 
     return { txHash: hash };
   };
