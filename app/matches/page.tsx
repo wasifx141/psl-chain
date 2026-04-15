@@ -6,6 +6,12 @@ import { PLAYERS, TEAM_COLORS } from "@/config/players";
 import { useStore } from "@/store/useStore";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useAccount } from "wagmi";
+import AdminMatchResult from "@/components/AdminMatchResult";
+import MatchResultCard from "@/components/MatchResultCard";
+import { useAllMatchResults } from "@/hooks/useMatchResult";
+import { calculateRewardShares } from "@/lib/services/fantasyPoints.service";
+import { SEASON } from "@/lib/constants";
 
 export default function MatchCenter() {
   const [loaded, setLoaded] = useState(false);
@@ -13,6 +19,8 @@ export default function MatchCenter() {
   const [nextMatch, setNextMatch] = useState<ReturnType<typeof getNextMatch> | null>(null);
   const [todayMatches, setTodayMatches] = useState<ReturnType<typeof getTodayMatches>>([]);
   const { holdings } = useStore();
+  const { address } = useAccount();
+  const { data: savedResults = [] } = useAllMatchResults();
 
   useEffect(() => {
     const t = setTimeout(() => setLoaded(true), 1500);
@@ -333,46 +341,60 @@ export default function MatchCenter() {
             </div>
           </div>
 
-          {/* Recent Results */}
-          <div className="card-surface rounded-xl p-6">
-            <h3 className="font-display text-lg font-semibold text-foreground mb-4">Recent Match Results</h3>
-            <div className="space-y-3">
-              {pastMatches.map((match) => (
-                <div key={match.id} className="flex items-center justify-between p-4 rounded-lg bg-muted/30 border border-border/50">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div
-                        className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold"
-                        style={{
-                          background: match.team1 ? `linear-gradient(135deg, ${getTeamColors(match.team1).from}, ${getTeamColors(match.team1).to})` : "hsl(0 0% 40%)",
-                          color: "white",
-                        }}
-                      >
-                        {match.team1 || "TBD"}
-                      </div>
-                      <span className="text-sm font-semibold text-muted-foreground">vs</span>
-                      <div
-                        className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold"
-                        style={{
-                          background: match.team2 ? `linear-gradient(135deg, ${getTeamColors(match.team2).from}, ${getTeamColors(match.team2).to})` : "hsl(0 0% 40%)",
-                          color: "white",
-                        }}
-                      >
-                        {match.team2 || "TBD"}
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {match.stage && <span className="font-semibold">{match.stage} • </span>}
-                      {match.venue}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-foreground">{formatMatchDate(match.timestamp)}</p>
-                    <span className="text-lg">✓</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* Admin Panel */}
+          <AdminMatchResult connectedWallet={address} />
+
+          {/* Match Results & Rewards */}
+          <div className="space-y-6 mt-4">
+            <h3 className="font-display text-2xl font-bold text-foreground pl-1 border-l-4 border-primary ml-1">Match Results & Rewards</h3>
+            
+            {savedResults.length > 0 ? (
+              <div className="space-y-8">
+                {savedResults.map((result) => {
+                  // Find the original match details for display
+                  const matchInfo = MATCHES.find((m) => m.id === result.matchId);
+                  const matchLabel = matchInfo 
+                    ? `Match #${result.matchId} — ${matchInfo.dateStr}` 
+                    : `Match #${result.matchId} — ${new Date(result.savedAt).toLocaleDateString()}`;
+                  
+                  // Convert user's DApp holdings to expected type
+                  const userStakingPositions = holdings.map((h) => ({
+                    walletAddress: address || '0xDemo',
+                    playerId: String(h.playerId),
+                    tokensStaked: h.tokens
+                  }));
+                  
+                  // Calculate local rewards
+                  const shares = calculateRewardShares(result, userStakingPositions, SEASON.DEFAULT_MATCH_POOL);
+                  const myShare = shares.find((s) => s.walletAddress === (address || '0xDemo'));
+                  const userRewardWFL = myShare?.rewardWFL || 0;
+                  
+                  // Extract player details for the user UI
+                  const userStakedPlayers = myShare?.weightedScore !== undefined && myShare.weightedScore > 0 
+                    ? holdings.filter(h => result.playerPerformances.some(p => p.playerId === String(h.playerId) && p.fantasyPoints > 0)).map(h => {
+                        const p = PLAYERS.find(pl => pl.id === String(h.playerId));
+                        return { playerName: p?.name || 'Unknown', tokens: h.tokens };
+                      })
+                    : [];
+
+                  return (
+                    <MatchResultCard
+                      key={result.matchId}
+                      result={result}
+                      matchLabel={matchLabel}
+                      userRewardWFL={myShare ? userRewardWFL : undefined}
+                      userStakedPlayers={userStakedPlayers}
+                      onClaim={() => toast.success(`Successfully claimed ${userRewardWFL.toFixed(4)} WFL from Prize Pool for Match #${result.matchId}!`)}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="card-surface rounded-xl p-8 text-center border border-border/50 bg-muted/20">
+                <p className="text-muted-foreground font-medium">No matches have been completed and processed yet.</p>
+                <p className="text-sm text-muted-foreground mt-2">Check back after a match finishes for stats and rewards!</p>
+              </div>
+            )}
           </div>
         </div>
       )}

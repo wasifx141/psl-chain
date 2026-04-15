@@ -1,23 +1,31 @@
-'use client';
+"use client";
 
-import { PLAYERS, TEAM_COLORS } from '@/config/players';
+import { PLAYERS, TEAM_COLORS } from "@/config/players";
 import {
-    getExplorerUrl,
-    useBuyTokens,
-    useGetBuyPrice,
-    useGetHoldings,
-    useGetSellPrice,
-    useGetTokensRemaining,
-    useSellTokens,
-    useStakeTokens,
-} from '@/hooks/useContract';
-import { formatNumber } from '@/utils/format';
-import { supabase } from '@/utils/supabase/client';
-import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
-import { formatEther } from 'viem';
-import { useAccount } from 'wagmi';
+  getExplorerUrl,
+  useBuyTokens,
+  useGetBuyPrice,
+  useGetHoldings,
+  useGetSellPrice,
+  useGetTokensRemaining,
+  useSellTokens,
+  useStakeTokens,
+} from "@/hooks/useContract";
+import { formatNumber } from "@/utils/format";
+import { supabase } from "@/utils/supabase/client";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { toast } from "sonner";
+import { formatEther } from "viem";
+import { useAccount } from "wagmi";
 
 interface Transaction {
   id: string;
@@ -45,12 +53,14 @@ export default function PlayerDetail() {
   const id = params.id as string;
   const player = PLAYERS.find((p) => p.id === id);
 
-  const [tab, setTab] = useState<'BUY' | 'SELL' | 'STAKE'>('BUY');
+  const [tab, setTab] = useState<"BUY" | "SELL" | "STAKE">("BUY");
   const [amount, setAmount] = useState(1);
   const [loading, setLoading] = useState(false);
 
   // Real-time data from Supabase
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
+    [],
+  );
   const [topHolders, setTopHolders] = useState<TopHolder[]>([]);
   const [priceHistory, setPriceHistory] = useState<PriceHistoryPoint[]>([]);
   const [myStaked, setMyStaked] = useState(0);
@@ -59,14 +69,18 @@ export default function PlayerDetail() {
 
   // On-chain reads
   const { data: remaining, isLoading: remainingLoading } =
-    useGetTokensRemaining(player?.tokenAddress ?? '');
-  const { data: buyPrice, isLoading: buyPriceLoading } =
-    useGetBuyPrice(player?.tokenAddress ?? '', amount);
-  const { data: sellPrice, isLoading: sellPriceLoading } =
-    useGetSellPrice(player?.tokenAddress ?? '', amount);
+    useGetTokensRemaining(player?.tokenAddress ?? "");
+  const { data: buyPrice, isLoading: buyPriceLoading } = useGetBuyPrice(
+    player?.tokenAddress ?? "",
+    amount,
+  );
+  const { data: sellPrice, isLoading: sellPriceLoading } = useGetSellPrice(
+    player?.tokenAddress ?? "",
+    amount,
+  );
   const { data: holdings } = useGetHoldings(
-    address ?? '',
-    player?.tokenAddress ?? '',
+    address ?? "",
+    player?.tokenAddress ?? "",
   );
 
   // Write hooks
@@ -79,73 +93,173 @@ export default function PlayerDetail() {
     if (!player) return;
 
     const fetchData = async () => {
+      console.log(
+        "🔄 Fetching data for player:",
+        player.name,
+        "ID:",
+        player.numericId,
+      );
+
       // Fetch recent transactions for this player
-      const { data: txData } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('player_id', player.numericId)
-        .order('timestamp', { ascending: false })
+      const { data: txData, error: txError } = await supabase
+        .from("transactions")
+        .select("*")
+        .or(
+          `player_id.eq.${player.numericId},player_token.ilike.${player.tokenAddress}`,
+        )
+        .order("timestamp", { ascending: false })
         .limit(10);
 
-      if (txData) setRecentTransactions(txData);
+      if (txError) {
+        console.error("❌ Error fetching transactions:", txError);
+      } else {
+        console.log("✅ Transactions fetched:", txData?.length || 0, "records");
+        if (txData) setRecentTransactions(txData);
+      }
 
       // Fetch price history (last 30 days)
-      const { data: priceData } = await supabase
-        .from('transactions')
-        .select('timestamp, cost_wc, amount')
-        .eq('player_id', player.numericId)
-        .in('action', ['buy', 'sell'])
-        .not('cost_wc', 'is', null)
-        .not('amount', 'is', null)
-        .order('timestamp', { ascending: true })
-        .limit(100);
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      if (priceData) {
+      const { data: priceData, error: priceError } = await supabase
+        .from("transactions")
+        .select("timestamp, cost_wc, amount")
+        .or(
+          `player_id.eq.${player.numericId},player_token.ilike.${player.tokenAddress}`,
+        )
+        .in("action", ["buy", "sell"])
+        .not("cost_wc", "is", null)
+        .not("amount", "is", null)
+        .gt("amount", 0)
+        .gte("timestamp", thirtyDaysAgo.toISOString())
+        .order("timestamp", { ascending: true });
+
+      if (priceError) {
+        console.error("❌ Error fetching price history:", priceError);
+      } else {
+        console.log(
+          "✅ Price data fetched:",
+          priceData?.length || 0,
+          "records",
+        );
+      }
+
+      if (priceData && priceData.length > 0) {
         const history = priceData
-          .filter((tx) => tx.cost_wc && tx.amount)
+          .filter((tx) => {
+            const amount = Number(tx.amount);
+            const cost = Number(tx.cost_wc);
+            return amount > 0 && cost > 0 && isFinite(cost / amount);
+          })
           .map((tx) => ({
             timestamp: tx.timestamp,
             price: Number(tx.cost_wc) / Number(tx.amount),
           }));
-        setPriceHistory(history);
+
+        // If we have valid history, set it
+        if (history.length > 0) {
+          console.log(
+            "✅ Setting price history with",
+            history.length,
+            "points",
+          );
+          setPriceHistory(history);
+        } else {
+          // If no valid history, create a single point with current price
+          console.log("⚠️ No valid price history, using current price");
+          setPriceHistory([
+            {
+              timestamp: new Date().toISOString(),
+              price: player.price,
+            },
+          ]);
+        }
+      } else {
+        // No data at all, use current price as starting point
+        console.log("⚠️ No price data, using current price");
+        setPriceHistory([
+          {
+            timestamp: new Date().toISOString(),
+            price: player.price,
+          },
+        ]);
       }
 
       // Calculate top holders from portfolio cache
-      const { data: portfolios } = await supabase
-        .from('portfolio_cache')
-        .select('wallet, holdings');
+      const { data: portfolios, error: portfolioError } = await supabase
+        .from("portfolio_cache")
+        .select("wallet, holdings");
+
+      if (portfolioError) {
+        console.error("❌ Error fetching portfolios:", portfolioError);
+      } else {
+        console.log(
+          "✅ Portfolios fetched:",
+          portfolios?.length || 0,
+          "records",
+        );
+      }
 
       if (portfolios) {
         const holders: Record<string, number> = {};
-        
+
         portfolios.forEach((p) => {
-          const holdings = p.holdings as Array<{ player_id: number; amount: number }>;
-          holdings.forEach((h) => {
-            if (h.player_id === player.numericId) {
-              holders[p.wallet] = (holders[p.wallet] || 0) + h.amount;
-            }
-          });
+          const hArray = p.holdings as Array<{
+            player_id: number;
+            amount: number;
+          }>;
+          if (hArray && Array.isArray(hArray)) {
+            hArray.forEach((h) => {
+              if (h.player_id === player.numericId) {
+                holders[p.wallet] = (holders[p.wallet] || 0) + h.amount;
+              }
+            });
+          }
         });
+
+        // Include the current connected user's holdings immediately without waiting for listener
+        if (address && holdings && Number(holdings) > 0) {
+          const addr = address.toLowerCase();
+          holders[addr] = Math.max(holders[addr] || 0, Number(holdings));
+        }
 
         const topHoldersList = Object.entries(holders)
           .map(([wallet, amount]) => ({ wallet, amount }))
           .sort((a, b) => b.amount - a.amount)
           .slice(0, 10);
 
+        console.log(
+          "✅ Top holders calculated:",
+          topHoldersList.length,
+          "holders",
+        );
         setTopHolders(topHoldersList);
       }
 
       // Fetch user's staked amount
       if (address) {
-        const { data: stakingData } = await supabase
-          .from('staking_positions')
-          .select('amount')
-          .eq('wallet', address.toLowerCase())
-          .eq('player_id', player.numericId)
-          .eq('is_active', true);
+        const { data: stakingData, error: stakingError } = await supabase
+          .from("staking_positions")
+          .select("amount")
+          .eq("wallet", address.toLowerCase())
+          .eq("player_id", player.numericId)
+          .eq("is_active", true);
+
+        if (stakingError) {
+          console.error("❌ Error fetching staking data:", stakingError);
+        } else {
+          console.log(
+            "✅ Staking data fetched:",
+            stakingData?.length || 0,
+            "positions",
+          );
+        }
 
         if (stakingData) {
-          const totalStaked = stakingData.reduce((sum, pos) => sum + Number(pos.amount), 0);
+          const totalStaked = stakingData.reduce(
+            (sum, pos) => sum + Number(pos.amount),
+            0,
+          );
           setMyStaked(totalStaked);
         }
       }
@@ -160,31 +274,31 @@ export default function PlayerDetail() {
     const transactionsChannel = supabase
       .channel(`player-${player.numericId}-transactions`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'transactions',
-          filter: `player_id=eq.${player.numericId}`,
+          event: "*",
+          schema: "public",
+          table: "transactions",
+          // Removing restrictive filter so we catch both player_id and player_token events
         },
         () => {
           fetchData();
-        }
+        },
       )
       .subscribe();
 
     const portfolioChannel = supabase
       .channel(`player-${player.numericId}-portfolio`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'portfolio_cache',
+          event: "*",
+          schema: "public",
+          table: "portfolio_cache",
         },
         () => {
           fetchData();
-        }
+        },
       )
       .subscribe();
 
@@ -222,9 +336,10 @@ export default function PlayerDetail() {
   const fee = displayBuyPrice * 0.02;
 
   // Calculate current price from recent transactions
-  const currentPrice = priceHistory.length > 0 
-    ? priceHistory[priceHistory.length - 1].price 
-    : displayBuyPrice;
+  const currentPrice =
+    priceHistory.length > 0
+      ? priceHistory[priceHistory.length - 1].price
+      : displayBuyPrice;
 
   // Format time ago
   const formatTimeAgo = (timestamp: string) => {
@@ -235,7 +350,7 @@ export default function PlayerDetail() {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'just now';
+    if (diffMins < 1) return "just now";
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${diffDays}d ago`;
@@ -244,40 +359,54 @@ export default function PlayerDetail() {
   // Get action color
   const getActionColor = (action: string) => {
     switch (action) {
-      case 'buy': return 'text-green-500';
-      case 'sell': return 'text-red-500';
-      case 'stake': return 'text-purple-500';
-      default: return 'text-muted-foreground';
+      case "buy":
+        return "text-green-500";
+      case "sell":
+        return "text-red-500";
+      case "stake":
+        return "text-purple-500";
+      default:
+        return "text-muted-foreground";
     }
   };
 
   // Get action label
   const getActionLabel = (action: string) => {
     switch (action) {
-      case 'buy': return 'Buy';
-      case 'sell': return 'Sell';
-      case 'stake': return 'Stake';
-      case 'unstake': return 'Unstake';
-      case 'claim_rewards': return 'Claim';
-      default: return action;
+      case "buy":
+        return "Buy";
+      case "sell":
+        return "Sell";
+      case "stake":
+        return "Stake";
+      case "unstake":
+        return "Unstake";
+      case "claim_rewards":
+        return "Claim";
+      default:
+        return action;
     }
   };
 
   const handleAction = async () => {
     if (!isConnected) {
-      toast.error('Connect your wallet first.');
+      toast.error("Connect your wallet first.");
       return;
     }
     setLoading(true);
     try {
       let result: { txHash: string };
 
-      if (tab === 'BUY') {
-        if (!buyPrice) throw new Error('Could not fetch buy price');
-        result = await buyTokens(player.tokenAddress, amount, buyPrice as bigint);
+      if (tab === "BUY") {
+        if (!buyPrice) throw new Error("Could not fetch buy price");
+        result = await buyTokens(
+          player.tokenAddress,
+          amount,
+          buyPrice as bigint,
+        );
         toast.success(
           <span>
-            Bought {amount} {player.symbol}!{' '}
+            Bought {amount} {player.symbol}!{" "}
             <a
               href={getExplorerUrl(result.txHash)}
               target="_blank"
@@ -288,12 +417,12 @@ export default function PlayerDetail() {
             </a>
           </span>,
         );
-      } else if (tab === 'SELL') {
-        if (myHoldings < amount) throw new Error('Insufficient holdings');
+      } else if (tab === "SELL") {
+        if (myHoldings < amount) throw new Error("Insufficient holdings");
         result = await sellTokens(player.tokenAddress, amount);
         toast.success(
           <span>
-            Sold {amount} {player.symbol}!{' '}
+            Sold {amount} {player.symbol}!{" "}
             <a
               href={getExplorerUrl(result.txHash)}
               target="_blank"
@@ -305,7 +434,7 @@ export default function PlayerDetail() {
           </span>,
         );
       } else {
-        if (myHoldings < amount) throw new Error('Not enough tokens to stake');
+        if (myHoldings < amount) throw new Error("Not enough tokens to stake");
         result = await stakeTokens(
           player.tokenAddress,
           player.numericId,
@@ -314,7 +443,7 @@ export default function PlayerDetail() {
         );
         toast.success(
           <span>
-            Staked {amount} {player.symbol} for Match 1!{' '}
+            Staked {amount} {player.symbol} for Match 1!{" "}
             <a
               href={getExplorerUrl(result.txHash)}
               target="_blank"
@@ -326,30 +455,48 @@ export default function PlayerDetail() {
           </span>,
         );
       }
-      
+
       // Force refetch data after successful transaction
       // Wait a bit for the blockchain to update
       setTimeout(() => {
         window.location.reload();
       }, 2000);
-      
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : 'Transaction failed. Try again.';
+        err instanceof Error ? err.message : "Transaction failed. Try again.";
       // Surface user-friendly messages for common revert reasons
-      if (msg.includes('Exceeds 10 token wallet cap')) {
-        toast.error('Wallet cap hit: max 10 tokens per player.');
-      } else if (msg.includes('Exceeds supply')) {
-        toast.error('Token sold out!');
-      } else if (msg.includes('Insufficient holdings')) {
-        toast.error('You don\'t hold enough tokens to sell.');
-      } else if (msg.includes('rejected') || msg.includes('denied')) {
-        toast.error('Transaction rejected by wallet.');
+      if (msg.includes("Exceeds 10 token wallet cap")) {
+        toast.error("Wallet cap hit: max 10 tokens per player.");
+      } else if (msg.includes("Exceeds supply")) {
+        toast.error("Token sold out!");
+      } else if (msg.includes("Insufficient holdings")) {
+        toast.error("You don't hold enough tokens to sell.");
+      } else if (msg.includes("rejected") || msg.includes("denied")) {
+        toast.error("Transaction rejected by wallet.");
       } else {
         toast.error(msg);
       }
     }
     setLoading(false);
+  };
+
+  const chartData = priceHistory.map((point, idx) => ({
+    day: idx + 1,
+    price: point.price,
+  }));
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="rounded-lg bg-[#1a1b2e] border border-[#2a2b3e] p-3 shadow-xl text-left">
+          <p className="text-white font-medium mb-1">{label}</p>
+          <p className="text-[#FFD700]">
+            price : {formatNumber(payload[0].value)}
+          </p>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -360,7 +507,7 @@ export default function PlayerDetail() {
           className="flex h-24 w-24 items-center justify-center rounded-full text-3xl font-bold ring-2"
           style={{
             background: `linear-gradient(135deg, ${colors.from}, ${colors.to})`,
-            color: 'white',
+            color: "white",
             boxShadow: `0 0 0 3px ${colors.border}40`,
           }}
         >
@@ -383,7 +530,7 @@ export default function PlayerDetail() {
             <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
               {player.role}
             </span>
-            {player.tier === 'Legend' && (
+            {player.tier === "Legend" && (
               <span className="rounded-full bg-yellow-500/20 px-3 py-1 text-xs text-yellow-500 flex items-center gap-1">
                 ⭐ Legend
               </span>
@@ -431,65 +578,79 @@ export default function PlayerDetail() {
             </h3>
             <div className="relative h-64 w-full">
               {priceHistory.length > 0 ? (
-                <svg className="w-full h-full" viewBox="0 0 600 200" preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="priceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor={colors.from} stopOpacity="0.3" />
-                      <stop offset="100%" stopColor={colors.from} stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  {/* Price line */}
-                  <polyline
-                    fill="url(#priceGradient)"
-                    stroke={colors.from}
-                    strokeWidth="2"
-                    points={priceHistory
-                      .map((point, i) => {
-                        const x = (i / (priceHistory.length - 1)) * 600;
-                        const minPrice = Math.min(...priceHistory.map(p => p.price));
-                        const maxPrice = Math.max(...priceHistory.map(p => p.price));
-                        const priceRange = maxPrice - minPrice || 1;
-                        const y = 180 - ((point.price - minPrice) / priceRange) * 160;
-                        return `${x},${y}`;
-                      })
-                      .join(' ') + ' 600,200 0,200'}
-                  />
-                  <polyline
-                    fill="none"
-                    stroke={colors.from}
-                    strokeWidth="3"
-                    points={priceHistory
-                      .map((point, i) => {
-                        const x = (i / (priceHistory.length - 1)) * 600;
-                        const minPrice = Math.min(...priceHistory.map(p => p.price));
-                        const maxPrice = Math.max(...priceHistory.map(p => p.price));
-                        const priceRange = maxPrice - minPrice || 1;
-                        const y = 180 - ((point.price - minPrice) / priceRange) * 160;
-                        return `${x},${y}`;
-                      })
-                      .join(' ')}
-                  />
-                  {/* Hover point */}
-                  {priceHistory.length > 0 && (
-                    <circle
-                      cx={600}
-                      cy={180 - ((priceHistory[priceHistory.length - 1].price - Math.min(...priceHistory.map(p => p.price))) / (Math.max(...priceHistory.map(p => p.price)) - Math.min(...priceHistory.map(p => p.price)) || 1)) * 160}
-                      r="4"
-                      fill={colors.from}
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={chartData}
+                    margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+                  >
+                    <defs>
+                      <linearGradient
+                        id={`priceGradient-${player.id}`}
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor={colors.from}
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor={colors.from}
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="day"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#64748b", fontSize: 12 }}
+                      dy={10}
+                      domain={[1, 30]}
+                      type="number"
+                      ticks={[
+                        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                        17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+                      ]}
                     />
-                  )}
-                </svg>
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#64748b", fontSize: 12 }}
+                      dx={-10}
+                      domain={[0, 0.6]}
+                      ticks={[0, 0.15, 0.3, 0.45, 0.6]}
+                    />
+                    <Tooltip
+                      content={<CustomTooltip />}
+                      cursor={{
+                        stroke: "rgba(255,255,255,0.2)",
+                        strokeWidth: 1,
+                        strokeDasharray: "none",
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="price"
+                      stroke={colors.from}
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill={`url(#priceGradient-${player.id})`}
+                      activeDot={{
+                        r: 6,
+                        fill: colors.from,
+                        stroke: "#1a1b2e",
+                        strokeWidth: 2,
+                      }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               ) : (
                 <div className="flex h-full items-center justify-center text-muted-foreground">
                   No price history available
-                </div>
-              )}
-              {priceHistory.length > 0 && (
-                <div className="absolute bottom-4 right-4 rounded-lg bg-background/80 backdrop-blur-sm px-3 py-2 text-sm">
-                  <div className="text-xs text-muted-foreground">Latest</div>
-                  <div className="font-bold text-foreground">
-                    price: {formatNumber(priceHistory[priceHistory.length - 1].price)}
-                  </div>
                 </div>
               )}
             </div>
@@ -504,12 +665,24 @@ export default function PlayerDetail() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="pb-2 text-left text-xs text-muted-foreground">Wallet</th>
-                    <th className="pb-2 text-left text-xs text-muted-foreground">Action</th>
-                    <th className="pb-2 text-right text-xs text-muted-foreground">Amount</th>
-                    <th className="pb-2 text-right text-xs text-muted-foreground">Price</th>
-                    <th className="pb-2 text-right text-xs text-muted-foreground">Time</th>
-                    <th className="pb-2 text-right text-xs text-muted-foreground">Tx</th>
+                    <th className="pb-2 text-left text-xs text-muted-foreground">
+                      Wallet
+                    </th>
+                    <th className="pb-2 text-left text-xs text-muted-foreground">
+                      Action
+                    </th>
+                    <th className="pb-2 text-right text-xs text-muted-foreground">
+                      Amount
+                    </th>
+                    <th className="pb-2 text-right text-xs text-muted-foreground">
+                      Price
+                    </th>
+                    <th className="pb-2 text-right text-xs text-muted-foreground">
+                      Time
+                    </th>
+                    <th className="pb-2 text-right text-xs text-muted-foreground">
+                      Tx
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -519,12 +692,18 @@ export default function PlayerDetail() {
                         <td className="py-3 font-mono text-xs text-yellow-500">
                           {tx.wallet.slice(0, 6)}...{tx.wallet.slice(-4)}
                         </td>
-                        <td className={`py-3 font-semibold capitalize ${getActionColor(tx.action)}`}>
+                        <td
+                          className={`py-3 font-semibold capitalize ${getActionColor(
+                            tx.action,
+                          )}`}
+                        >
                           {getActionLabel(tx.action)}
                         </td>
-                        <td className="py-3 text-right">{tx.amount || '-'}</td>
+                        <td className="py-3 text-right">{tx.amount || "-"}</td>
                         <td className="py-3 text-right">
-                          {tx.cost_wc ? `${formatNumber(Number(tx.cost_wc))} WC` : '-'}
+                          {tx.cost_wc
+                            ? `${formatNumber(Number(tx.cost_wc))} WC`
+                            : "-"}
                         </td>
                         <td className="py-3 text-right text-muted-foreground">
                           {formatTimeAgo(tx.timestamp)}
@@ -543,8 +722,16 @@ export default function PlayerDetail() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-muted-foreground">
-                        No transactions yet
+                      <td colSpan={6} className="py-12 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="text-4xl opacity-20">📊</div>
+                          <div className="text-muted-foreground">
+                            No transactions yet
+                          </div>
+                          <div className="text-xs text-muted-foreground/70">
+                            Be the first to trade {player.symbol}!
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -563,17 +750,22 @@ export default function PlayerDetail() {
                 topHolders.map((holder, index) => {
                   const maxAmount = topHolders[0]?.amount || 1;
                   const percentage = (holder.amount / maxAmount) * 100;
-                  
+
                   return (
                     <div key={holder.wallet} className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground w-6">{index + 1}</span>
+                          <span className="text-muted-foreground w-6">
+                            {index + 1}
+                          </span>
                           <span className="font-mono text-xs text-yellow-500">
-                            {holder.wallet.slice(0, 6)}...{holder.wallet.slice(-4)}
+                            {holder.wallet.slice(0, 6)}...
+                            {holder.wallet.slice(-4)}
                           </span>
                         </div>
-                        <span className="font-semibold text-foreground">{holder.amount}</span>
+                        <span className="font-semibold text-foreground">
+                          {holder.amount}
+                        </span>
                       </div>
                       <div className="h-8 w-full rounded-lg bg-muted overflow-hidden">
                         <div
@@ -588,8 +780,14 @@ export default function PlayerDetail() {
                   );
                 })
               ) : (
-                <div className="py-8 text-center text-muted-foreground">
-                  No holders yet
+                <div className="py-12 text-center">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="text-4xl opacity-20">👥</div>
+                    <div className="text-muted-foreground">No holders yet</div>
+                    <div className="text-xs text-muted-foreground/70">
+                      Buy tokens to become the first holder!
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -600,7 +798,7 @@ export default function PlayerDetail() {
         <div className="card-surface rounded-xl p-5 h-fit sticky top-4">
           {/* Tabs */}
           <div className="mb-4 flex rounded-lg bg-muted p-1">
-            {(['BUY', 'SELL', 'STAKE'] as const).map((t) => (
+            {(["BUY", "SELL", "STAKE"] as const).map((t) => (
               <button
                 key={t}
                 id={`tab-${t.toLowerCase()}`}
@@ -610,8 +808,8 @@ export default function PlayerDetail() {
                 }}
                 className={`flex-1 rounded-md py-2 text-sm font-semibold transition-colors ${
                   tab === t
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {t}
@@ -622,13 +820,14 @@ export default function PlayerDetail() {
           <div className="space-y-4">
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">
-                Amount (Max {tab === 'BUY' ? '10' : myHoldings} per wallet, enforced on-chain)
+                Amount (Max {tab === "BUY" ? "10" : myHoldings} per wallet,
+                enforced on-chain)
               </label>
               <input
                 id="amount-input"
                 type="number"
                 min={1}
-                max={tab === 'SELL' || tab === 'STAKE' ? myHoldings : 10}
+                max={tab === "SELL" || tab === "STAKE" ? myHoldings : 10}
                 value={amount}
                 onChange={(e) =>
                   setAmount(Math.max(1, parseInt(e.target.value) || 1))
@@ -637,22 +836,26 @@ export default function PlayerDetail() {
               />
               <div className="mt-1 flex justify-between text-xs text-muted-foreground">
                 <span>Min: 1</span>
-                <span>Max: {tab === 'BUY' ? '10' : myHoldings}</span>
+                <span>Max: {tab === "BUY" ? "10" : myHoldings}</span>
               </div>
             </div>
 
-            {tab === 'BUY' && (
+            {tab === "BUY" && (
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">You pay:</span>
                   <span className="text-foreground font-semibold">
-                    {buyPriceLoading ? '…' : `${formatNumber(displayBuyPrice)} WC`}
+                    {buyPriceLoading
+                      ? "…"
+                      : `${formatNumber(displayBuyPrice)} WC`}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Platform fee (2%):</span>
+                  <span className="text-muted-foreground">
+                    Platform fee (2%):
+                  </span>
                   <span className="text-foreground">
-                    {buyPriceLoading ? '…' : `${formatNumber(fee)} WC`}
+                    {buyPriceLoading ? "…" : `${formatNumber(fee)} WC`}
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-border pt-2 font-semibold">
@@ -664,13 +867,13 @@ export default function PlayerDetail() {
               </div>
             )}
 
-            {tab === 'SELL' && (
+            {tab === "SELL" && (
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">You receive:</span>
                   <span className="text-green-500 font-semibold">
                     {sellPriceLoading
-                      ? '…'
+                      ? "…"
                       : `${formatNumber(displaySellPrice)} WC`}
                   </span>
                 </div>
@@ -681,7 +884,7 @@ export default function PlayerDetail() {
               </div>
             )}
 
-            {tab === 'STAKE' && (
+            {tab === "STAKE" && (
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Staking for:</span>
@@ -711,20 +914,20 @@ export default function PlayerDetail() {
               className="w-full bg-gold-gradient rounded-lg py-3 font-semibold text-primary-foreground disabled:opacity-50 hover:brightness-90 transition-all"
             >
               {loading
-                ? tab === 'SELL'
-                  ? 'Approving & Selling…'
-                  : tab === 'STAKE'
-                  ? 'Approving & Staking…'
-                  : 'Buying…'
-                : `${tab} ${amount} ${amount === 1 ? 'TOKEN' : 'TOKENS'}`}
+                ? tab === "SELL"
+                  ? "Approving & Selling…"
+                  : tab === "STAKE"
+                  ? "Approving & Staking…"
+                  : "Buying…"
+                : `${tab} ${amount} ${amount === 1 ? "TOKEN" : "TOKENS"}`}
             </button>
 
             <p className="text-[11px] text-muted-foreground text-center">
-              {tab === 'SELL'
-                ? 'Sell requires 2 wallet signatures (approve + sell).'
-                : tab === 'STAKE'
-                ? 'Stake requires 2 wallet signatures (approve + stake).'
-                : 'Excess WC auto-refunded by contract.'}
+              {tab === "SELL"
+                ? "Sell requires 2 wallet signatures (approve + sell)."
+                : tab === "STAKE"
+                ? "Stake requires 2 wallet signatures (approve + stake)."
+                : "Excess WC auto-refunded by contract."}
             </p>
           </div>
         </div>

@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 /**
  * @title BondingCurve
  * @notice Pure library for bonding curve price calculations.
- *         Sigmoid-style: price_i = base + (base * i * i) / 2000
+ *         Sigmoid-style: price_i = base + (base * i * i) / 100
  *         This creates genuine scarcity — each token costs more as supply depletes.
  *
  * Tier pricing:
@@ -27,7 +27,9 @@ library BondingCurve {
     /// @notice Price of the token at position `tokenIndex` on the curve
     function getPriceAtToken(uint8 tier, uint256 tokenIndex) internal pure returns (uint256) {
         uint256 base = getBasePrice(tier);
-        return base + (base * tokenIndex * tokenIndex) / 2000;
+        // Changed divisor from 2000 to 40 to increase price fluctuation
+        // such that price goes up by ~10% after just 2 tokens.
+        return base + (base * tokenIndex * tokenIndex) / 40;
     }
 
     /**
