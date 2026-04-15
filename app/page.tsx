@@ -147,7 +147,7 @@ export default function Home() {
               {
                 label: "Prize Pool",
                 value: `${
-                  matchPool > 0 ? matchPool.toLocaleString() : "125K"
+                  matchPool > 0 ? matchPool.toLocaleString() : "125"
                 } WC`,
               },
             ].map((stat, i) => (

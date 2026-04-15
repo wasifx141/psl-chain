@@ -157,38 +157,41 @@ export default function PlayerDetail() {
 
   // Fetch player activity and holders directly from chain data
   useEffect(() => {
-    if (!player || !publicClient) return;
+    if (!player || !publicClient || !player.tokenAddress) return;
 
     let cancelled = false;
     const playerToken = player.tokenAddress as `0x${string}`;
 
     const fetchData = async () => {
       try {
+        const currentBlock = await publicClient.getBlockNumber();
+        const fromBlock = currentBlock - 8000n > 0n ? currentBlock - 8000n : 0n;
+
         const [buyLogs, sellLogs, stakeLogs, unstakeLogs] = await Promise.all([
           publicClient.getLogs({
             address: CONTRACTS.MARKET,
             event: TOKEN_BOUGHT_EVENT,
             args: { playerToken },
-            fromBlock: 0n,
+            fromBlock,
             toBlock: "latest",
           }),
           publicClient.getLogs({
             address: CONTRACTS.MARKET,
             event: TOKEN_SOLD_EVENT,
             args: { playerToken },
-            fromBlock: 0n,
+            fromBlock,
             toBlock: "latest",
           }),
           publicClient.getLogs({
             address: CONTRACTS.STAKING,
             event: STAKED_EVENT,
-            fromBlock: 0n,
+            fromBlock,
             toBlock: "latest",
           }),
           publicClient.getLogs({
             address: CONTRACTS.STAKING,
             event: UNSTAKED_EVENT,
-            fromBlock: 0n,
+            fromBlock,
             toBlock: "latest",
           }),
         ]);

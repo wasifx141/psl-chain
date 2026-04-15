@@ -181,7 +181,11 @@ export function useGetPortfolio(wallet: string) {
     address: CONTRACTS.MARKET as `0x${string}`,
     abi: MARKET_ABI,
     functionName: "getHoldings" as const,
-    args: [wallet as `0x${string}`, p.tokenAddress as `0x${string}`],
+    args: [
+      wallet as `0x${string}`,
+      (p.tokenAddress ||
+        "0x0000000000000000000000000000000000000000") as `0x${string}`,
+    ],
   }));
 
   const result = useReadContracts({
@@ -208,14 +212,21 @@ export function useGetAllPlayersSupply() {
     address: CONTRACTS.MARKET as `0x${string}`,
     abi: MARKET_ABI,
     functionName: "getTokensRemaining" as const,
-    args: [p.tokenAddress as `0x${string}`],
+    args: [
+      (p.tokenAddress ||
+        "0x0000000000000000000000000000000000000000") as `0x${string}`,
+    ],
   }));
 
   const priceContracts = PLAYERS.map((p) => ({
     address: CONTRACTS.MARKET as `0x${string}`,
     abi: MARKET_ABI,
     functionName: "getBuyPrice" as const,
-    args: [p.tokenAddress as `0x${string}`, 1n],
+    args: [
+      (p.tokenAddress ||
+        "0x0000000000000000000000000000000000000000") as `0x${string}`,
+      1n,
+    ],
   }));
 
   const result = useReadContracts({
@@ -298,7 +309,7 @@ export function useGetPrizePool() {
 
   return {
     matchPool: seasonData
-      ? Number(formatEther((seasonData as any)[0] as bigint))
+      ? Number(formatEther((seasonData as unknown as bigint[])[0]))
       : 0,
     currentSeason: currentSeason ? Number(currentSeason) : 1,
   };
