@@ -6,6 +6,5 @@ coverage.json
 typechain/
 typechain-types/
 cache/
-artifacts/
 .next/
 out/
