@@ -50,9 +50,9 @@ export default function Home() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-            Pakistan's first on-chain fantasy cricket market. Buy player tokens.
-            Stake before matches. Earn from performance — daily, transparently,
-            on WireFluid blockchain.
+            Pakistan&apos;s first on-chain fantasy cricket market. Buy player
+            tokens. Stake before matches. Earn from performance — daily,
+            transparently, on WireFluid blockchain.
           </p>
 
           <div className="mt-8 flex flex-col items-center">
